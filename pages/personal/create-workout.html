@@ -1,0 +1,309 @@
+<div class="create-workout-page">
+  <header>
+    <h1>Criar Treino</h1>
+    <nav>
+      <a href="#/personal/dashboard">Dashboard</a>
+      <a href="#/personal/exercises">Exercícios</a>
+      <a href="#" id="logoutBtn">Sair</a>
+    </nav>
+  </header>
+
+  <div style="max-width: 1200px; margin: 30px auto;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+      <!-- Coluna Esquerda: Formulário -->
+      <div>
+        <h2>Informações do Treino</h2>
+        
+        <div id="createError" class="alert error" style="display: none;"></div>
+        <div id="createSuccess" class="alert success" style="display: none;"></div>
+
+        <div class="form-group">
+          <label for="workoutName">Nome do Treino:</label>
+          <input type="text" id="workoutName" placeholder="Ex: Treino A - Peito" required>
+        </div>
+
+        <div class="form-group">
+          <label for="workoutDescription">Descrição:</label>
+          <textarea id="workoutDescription" placeholder="Descreva o treino..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="studentSelect">Associar a Aluno:</label>
+          <select id="studentSelect">
+            <option value="">-- Selecione um aluno (opcional) --</option>
+          </select>
+        </div>
+
+        <h3 style="margin-top: 20px;">Selecione os Dias</h3>
+        <div class="days-grid" id="daysGrid">
+          <div class="day-box" data-day="monday">Segunda</div>
+          <div class="day-box" data-day="tuesday">Terça</div>
+          <div class="day-box" data-day="wednesday">Quarta</div>
+          <div class="day-box" data-day="thursday">Quinta</div>
+          <div class="day-box" data-day="friday">Sexta</div>
+          <div class="day-box" data-day="saturday">Sábado</div>
+          <div class="day-box" data-day="sunday">Domingo</div>
+        </div>
+
+        <h3 style="margin-top: 20px;">Exercícios Disponíveis</h3>
+        <div id="availableExercises" class="exercises-list"></div>
+
+        <button onclick="clearSelection()" class="secondary" style="margin-top: 20px; width: 100%;">Limpar Seleção</button>
+        <button onclick="saveWorkout()" style="margin-top: 10px; width: 100%;">Salvar Treino</button>
+      </div>
+
+      <!-- Coluna Direita: Visualização -->
+      <div>
+        <h2>Visualização do Treino</h2>
+        <div id="workoutPreview" style="border: 2px solid #000000; padding: 15px; min-height: 400px;">
+          <p style="color: #999;">A visualização aparecerá aqui...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Estado global
+  const workoutState = {
+    name: '',
+    description: '',
+    studentId: '',
+    selectedDays: {},
+    dayExercises: {}
+  };
+
+  // Inicializar dias
+  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  const dayNames = {
+    monday: 'Segunda-feira',
+    tuesday: 'Terça-feira',
+    wednesday: 'Quarta-feira',
+    thursday: 'Quinta-feira',
+    friday: 'Sexta-feira',
+    saturday: 'Sábado',
+    sunday: 'Domingo'
+  };
+
+  days.forEach(day => {
+    workoutState.selectedDays[day] = false;
+    workoutState.dayExercises[day] = [];
+  });
+
+  // Logout
+  document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await authManager.logout();
+    router.goToLogin();
+  });
+
+  // Carregar alunos
+  async function loadStudents() {
+    const students = await dbManager.getAllStudents();
+    const select = document.getElementById('studentSelect');
+    
+    students.forEach(student => {
+      const option = document.createElement('option');
+      option.value = student.uid;
+      option.textContent = student.name;
+      select.appendChild(option);
+    });
+
+    select.addEventListener('change', (e) => {
+      workoutState.studentId = e.target.value;
+      updatePreview();
+    });
+  }
+
+  // Carregar exercícios
+  async function loadExercises() {
+    const exercises = await dbManager.getPersonalExercises();
+    const container = document.getElementById('availableExercises');
+
+    if (exercises.length === 0) {
+      container.innerHTML = '<p>Nenhum exercício disponível. <a href="#/personal/exercises">Criar exercício</a></p>';
+    } else {
+      container.innerHTML = exercises.map(exercise => `
+        <div class="exercise-item">
+          <div class="exercise-info">
+            <h4>${exercise.name}</h4>
+            <p>${exercise.description}</p>
+          </div>
+          <div class="exercise-actions">
+            <button onclick="addExerciseToDay('${exercise.id}', '${exercise.name}')" class="secondary">Adicionar</button>
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+
+  // Selecionar/desselecionar dia
+  document.querySelectorAll('.day-box').forEach(box => {
+    box.addEventListener('click', () => {
+      const day = box.dataset.day;
+      workoutState.selectedDays[day] = !workoutState.selectedDays[day];
+      box.classList.toggle('selected');
+      updatePreview();
+    });
+  });
+
+  // Adicionar exercício ao dia
+  function addExerciseToDay(exerciseId, exerciseName) {
+    // Encontrar primeiro dia selecionado
+    const selectedDay = Object.keys(workoutState.selectedDays).find(day => workoutState.selectedDays[day]);
+    
+    if (!selectedDay) {
+      alert('Selecione um dia primeiro!');
+      return;
+    }
+
+    // Pedir informações do exercício
+    const sets = prompt('Quantas séries?', '3');
+    if (sets === null) return;
+
+    const reps = prompt('Quantas repetições?', '10');
+    if (reps === null) return;
+
+    const notes = prompt('Observações (opcional):', '');
+
+    // Adicionar ao dia
+    workoutState.dayExercises[selectedDay].push({
+      exerciseId: exerciseId,
+      exerciseName: exerciseName,
+      sets: sets,
+      reps: reps,
+      notes: notes
+    });
+
+    updatePreview();
+  }
+
+  // Atualizar visualização
+  function updatePreview() {
+    const preview = document.getElementById('workoutPreview');
+    let html = '<h3>' + (document.getElementById('workoutName').value || 'Sem nome') + '</h3>';
+    
+    if (document.getElementById('workoutDescription').value) {
+      html += '<p><strong>Descrição:</strong> ' + document.getElementById('workoutDescription').value + '</p>';
+    }
+
+    const studentSelect = document.getElementById('studentSelect');
+    if (studentSelect.value) {
+      const studentName = studentSelect.options[studentSelect.selectedIndex].text;
+      html += '<p><strong>Aluno:</strong> ' + studentName + '</p>';
+    }
+
+    html += '<h4 style="margin-top: 15px;">Dias e Exercícios:</h4>';
+
+    days.forEach(day => {
+      if (workoutState.selectedDays[day]) {
+        html += '<div style="margin: 10px 0; padding: 10px; border-left: 2px solid #000000;">';
+        html += '<strong>' + dayNames[day] + '</strong>';
+        
+        if (workoutState.dayExercises[day].length === 0) {
+          html += '<p style="margin: 5px 0; font-size: 12px; color: #999;">Nenhum exercício</p>';
+        } else {
+          html += '<ul style="margin: 5px 0; padding-left: 20px;">';
+          workoutState.dayExercises[day].forEach((ex, idx) => {
+            html += '<li>' + ex.exerciseName + ' - ' + ex.sets + 'x' + ex.reps;
+            if (ex.notes) html += ' (' + ex.notes + ')';
+            html += ' <button onclick="removeExercise(\'' + day + '\', ' + idx + ')" class="danger" style="padding: 2px 5px; font-size: 10px;">X</button></li>';
+          });
+          html += '</ul>';
+        }
+        html += '</div>';
+      }
+    });
+
+    preview.innerHTML = html;
+  }
+
+  // Remover exercício
+  function removeExercise(day, index) {
+    workoutState.dayExercises[day].splice(index, 1);
+    updatePreview();
+  }
+
+  // Limpar seleção
+  function clearSelection() {
+    workoutState.name = '';
+    workoutState.description = '';
+    workoutState.studentId = '';
+    
+    days.forEach(day => {
+      workoutState.selectedDays[day] = false;
+      workoutState.dayExercises[day] = [];
+    });
+
+    document.getElementById('workoutName').value = '';
+    document.getElementById('workoutDescription').value = '';
+    document.getElementById('studentSelect').value = '';
+    
+    document.querySelectorAll('.day-box').forEach(box => {
+      box.classList.remove('selected');
+    });
+
+    updatePreview();
+  }
+
+  // Salvar treino
+  async function saveWorkout() {
+    const name = document.getElementById('workoutName').value;
+    const description = document.getElementById('workoutDescription').value;
+    const errorDiv = document.getElementById('createError');
+    const successDiv = document.getElementById('createSuccess');
+
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'none';
+
+    if (!name) {
+      errorDiv.textContent = 'Nome do treino é obrigatório';
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    // Verificar se há dias selecionados
+    const hasDays = Object.values(workoutState.selectedDays).some(v => v);
+    if (!hasDays) {
+      errorDiv.textContent = 'Selecione pelo menos um dia';
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    // Preparar dados dos dias
+    const daysData = {};
+    days.forEach(day => {
+      if (workoutState.selectedDays[day]) {
+        daysData[day] = workoutState.dayExercises[day];
+      }
+    });
+
+    const result = await dbManager.createWorkout(
+      name,
+      description,
+      daysData,
+      document.getElementById('studentSelect').value || null
+    );
+
+    if (result.success) {
+      successDiv.textContent = 'Treino salvo com sucesso!';
+      successDiv.style.display = 'block';
+      
+      setTimeout(() => {
+        router.goToPersonalDashboard();
+      }, 1500);
+    } else {
+      errorDiv.textContent = result.error;
+      errorDiv.style.display = 'block';
+    }
+  }
+
+  // Monitorar mudanças no nome e descrição
+  document.getElementById('workoutName').addEventListener('input', updatePreview);
+  document.getElementById('workoutDescription').addEventListener('input', updatePreview);
+
+  // Carregar dados iniciais
+  loadStudents();
+  loadExercises();
+  updatePreview();
+</script>

@@ -1,0 +1,127 @@
+<div class="student-view-workout">
+  <header>
+    <h1>Visualizar Treino</h1>
+    <nav>
+      <a href="#/student/dashboard">Meus Treinos</a>
+      <a href="#" id="logoutBtn">Sair</a>
+    </nav>
+  </header>
+
+  <div style="max-width: 900px; margin: 30px auto;">
+    <div id="workoutContainer"></div>
+  </div>
+</div>
+
+<script>
+  // Logout
+  document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await authManager.logout();
+    router.goToLogin();
+  });
+
+  // Mapeamento de nomes dos dias
+  const dayNames = {
+    monday: 'Segunda-feira',
+    tuesday: 'Terça-feira',
+    wednesday: 'Quarta-feira',
+    thursday: 'Quinta-feira',
+    friday: 'Sexta-feira',
+    saturday: 'Sábado',
+    sunday: 'Domingo'
+  };
+
+  const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+  // Carregar treino
+  async function loadWorkout() {
+    const workoutId = sessionStorage.getItem('viewWorkoutId');
+    
+    if (!workoutId) {
+      document.getElementById('workoutContainer').innerHTML = '<p>Treino não encontrado.</p>';
+      return;
+    }
+
+    const workout = await dbManager.getWorkoutById(workoutId);
+    
+    if (!workout) {
+      document.getElementById('workoutContainer').innerHTML = '<p>Treino não encontrado.</p>';
+      return;
+    }
+
+    // Renderizar treino
+    let html = '<div class="workout-header">';
+    html += '<h2>' + workout.name + '</h2>';
+    html += '<p>' + workout.description + '</p>';
+    html += '</div>';
+
+    // Criar navegação de dias
+    const daysWithExercises = dayOrder.filter(day => workout.days[day] && workout.days[day].length > 0);
+    
+    if (daysWithExercises.length === 0) {
+      html += '<p>Este treino não possui exercícios.</p>';
+    } else {
+      html += '<div class="days-navigation">';
+      daysWithExercises.forEach((day, index) => {
+        html += '<button class="day-btn' + (index === 0 ? ' active' : '') + '" onclick="switchDay(\'' + day + '\')">' + dayNames[day] + '</button>';
+      });
+      html += '</div>';
+
+      // Renderizar conteúdo de cada dia
+      daysWithExercises.forEach((day, index) => {
+        html += '<div class="day-content' + (index === 0 ? ' active' : '') + '" data-day="' + day + '">';
+        html += '<h3>' + dayNames[day] + '</h3>';
+        html += '<div class="exercises-for-day">';
+
+        workout.days[day].forEach(exercise => {
+          html += '<div class="exercise-card">';
+          html += '<h4>' + exercise.exerciseName + '</h4>';
+          
+          html += '<div class="sets-reps">';
+          html += '<strong>Séries:</strong> ' + exercise.sets + ' | ';
+          html += '<strong>Repetições:</strong> ' + exercise.reps;
+          html += '</div>';
+
+          if (exercise.notes) {
+            html += '<div class="notes">';
+            html += '<strong>Observações:</strong> ' + exercise.notes;
+            html += '</div>';
+          }
+
+          // Adicionar vídeo se disponível
+          if (exercise.videoUrl) {
+            html += '<div class="video-container">';
+            html += '<iframe src="' + exercise.videoUrl + '" allowfullscreen></iframe>';
+            html += '</div>';
+          }
+
+          html += '</div>';
+        });
+
+        html += '</div>';
+        html += '</div>';
+      });
+    }
+
+    document.getElementById('workoutContainer').innerHTML = html;
+  }
+
+  // Trocar dia
+  function switchDay(day) {
+    // Remover classe active de todos os botões e conteúdos
+    document.querySelectorAll('.day-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.day-content').forEach(content => content.classList.remove('active'));
+
+    // Adicionar classe active ao botão e conteúdo selecionado
+    document.querySelectorAll('.day-btn').forEach(btn => {
+      if (btn.textContent.toLowerCase().includes(dayNames[day].split('-')[0])) {
+        btn.classList.add('active');
+      }
+    });
+
+    document.querySelector('[data-day="' + day + '"]').classList.add('active');
+  }
+
+  // Carregar treino quando página for carregada
+  loadWorkout();
+</script>

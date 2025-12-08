@@ -1,0 +1,79 @@
+<div class="personal-dashboard">
+  <header>
+    <h1>Personal Trainer - Dashboard</h1>
+    <nav>
+      <a href="#/personal/exercises">Exercícios</a>
+      <a href="#/personal/create-workout">Criar Treino</a>
+      <a href="#" id="logoutBtn">Sair</a>
+    </nav>
+  </header>
+
+  <div style="max-width: 1000px; margin: 30px auto;">
+    <h2>Bem-vindo, <span id="personalName"></span>!</h2>
+    
+    <h3 style="margin-top: 30px; margin-bottom: 15px;">Meus Treinos</h3>
+    <div id="workoutsList" class="workouts-list"></div>
+  </div>
+</div>
+
+<script>
+  // Logout
+  document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await authManager.logout();
+    router.goToLogin();
+  });
+
+  // Carregar dados do Personal
+  async function loadPersonalDashboard() {
+    const user = authManager.getCurrentUser();
+    const userData = await dbManager.getCurrentUserData();
+    
+    if (userData) {
+      document.getElementById('personalName').textContent = userData.name;
+    }
+
+    // Carregar treinos
+    const workouts = await dbManager.getPersonalWorkouts();
+    const workoutsList = document.getElementById('workoutsList');
+
+    if (workouts.length === 0) {
+      workoutsList.innerHTML = '<p>Nenhum treino criado ainda. <a href="#/personal/create-workout">Criar novo treino</a></p>';
+    } else {
+      workoutsList.innerHTML = workouts.map(workout => `
+        <div class="card">
+          <h4>${workout.name}</h4>
+          <p>${workout.description}</p>
+          <p><strong>Aluno:</strong> ${workout.studentId ? 'Associado' : 'Não associado'}</p>
+          <div style="margin-top: 10px;">
+            <button onclick="editWorkout('${workout.id}')" class="secondary">Editar</button>
+            <button onclick="deleteWorkout('${workout.id}')" class="danger">Deletar</button>
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+
+  // Deletar treino
+  async function deleteWorkout(workoutId) {
+    if (confirm('Tem certeza que deseja deletar este treino?')) {
+      const result = await dbManager.deleteWorkout(workoutId);
+      if (result.success) {
+        alert('Treino deletado com sucesso!');
+        loadPersonalDashboard();
+      } else {
+        alert('Erro ao deletar treino: ' + result.error);
+      }
+    }
+  }
+
+  // Editar treino (redirecionar para página de criação)
+  function editWorkout(workoutId) {
+    // Armazenar ID do treino em sessão para edição
+    sessionStorage.setItem('editWorkoutId', workoutId);
+    router.goToCreateWorkout();
+  }
+
+  // Carregar dashboard quando página for carregada
+  loadPersonalDashboard();
+</script>

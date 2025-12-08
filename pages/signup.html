@@ -1,0 +1,81 @@
+<div class="signup-container">
+  <form id="signupForm">
+    <h2>Cadastro</h2>
+    
+    <div id="signupError" class="alert error" style="display: none;"></div>
+    
+    <div class="form-group">
+      <label for="signupName">Nome:</label>
+      <input type="text" id="signupName" required>
+    </div>
+
+    <div class="form-group">
+      <label for="signupEmail">Email:</label>
+      <input type="email" id="signupEmail" required>
+    </div>
+
+    <div class="form-group">
+      <label for="signupPassword">Senha:</label>
+      <input type="password" id="signupPassword" required>
+    </div>
+
+    <div class="form-group">
+      <label for="signupPasswordConfirm">Confirmar Senha:</label>
+      <input type="password" id="signupPasswordConfirm" required>
+    </div>
+
+    <div class="form-group">
+      <label>Tipo de Usuário:</label>
+      <div class="radio-group">
+        <div class="radio-item">
+          <input type="radio" id="typePersonal" name="userType" value="personal" required>
+          <label for="typePersonal">Personal Trainer</label>
+        </div>
+        <div class="radio-item">
+          <input type="radio" id="typeStudent" name="userType" value="student" required>
+          <label for="typeStudent">Aluno</label>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit">Cadastrar</button>
+    
+    <p style="margin-top: 15px; text-align: center;">
+      Já tem conta? <a href="#/login" style="cursor: pointer;">Faça login aqui</a>
+    </p>
+  </form>
+</div>
+
+<script>
+  document.getElementById('signupForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const name = document.getElementById('signupName').value;
+    const email = document.getElementById('signupEmail').value;
+    const password = document.getElementById('signupPassword').value;
+    const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
+    const userType = document.querySelector('input[name="userType"]:checked').value;
+    const errorDiv = document.getElementById('signupError');
+    
+    // Validar senhas
+    if (password !== passwordConfirm) {
+      errorDiv.textContent = 'As senhas não conferem';
+      errorDiv.style.display = 'block';
+      return;
+    }
+    
+    const result = await authManager.signup(email, password, name, userType);
+    
+    if (result.success) {
+      // Redirecionar para dashboard apropriado
+      if (result.userType === 'personal') {
+        router.goToPersonalDashboard();
+      } else {
+        router.goToStudentDashboard();
+      }
+    } else {
+      errorDiv.textContent = result.error;
+      errorDiv.style.display = 'block';
+    }
+  });
+</script>

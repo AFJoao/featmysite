@@ -1,0 +1,125 @@
+<div class="exercises-page">
+  <header>
+    <h1>Gerenciar Exercícios</h1>
+    <nav>
+      <a href="#/personal/dashboard">Dashboard</a>
+      <a href="#/personal/create-workout">Criar Treino</a>
+      <a href="#" id="logoutBtn">Sair</a>
+    </nav>
+  </header>
+
+  <div style="max-width: 1000px; margin: 30px auto;">
+    <h2>Meus Exercícios</h2>
+
+    <div style="margin-bottom: 30px; border: 2px solid #000000; padding: 20px;">
+      <h3>Criar Novo Exercício</h3>
+      
+      <div id="createError" class="alert error" style="display: none;"></div>
+      <div id="createSuccess" class="alert success" style="display: none;"></div>
+
+      <div class="form-group">
+        <label for="exerciseName">Nome do Exercício:</label>
+        <input type="text" id="exerciseName" placeholder="Ex: Supino" required>
+      </div>
+
+      <div class="form-group">
+        <label for="exerciseDescription">Descrição:</label>
+        <textarea id="exerciseDescription" placeholder="Descreva o exercício..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="exerciseVideo">URL do Vídeo (YouTube):</label>
+        <input type="text" id="exerciseVideo" placeholder="Ex: https://www.youtube.com/embed/dQw4w9WgXcQ">
+      </div>
+
+      <button onclick="createExercise()" type="button">Criar Exercício</button>
+    </div>
+
+    <h3>Lista de Exercícios</h3>
+    <div id="exercisesList" class="exercises-list"></div>
+  </div>
+</div>
+
+<script>
+  // Logout
+  document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await authManager.logout();
+    router.goToLogin();
+  });
+
+  // Criar exercício
+  async function createExercise() {
+    const name = document.getElementById('exerciseName').value;
+    const description = document.getElementById('exerciseDescription').value;
+    const videoUrl = document.getElementById('exerciseVideo').value;
+    const errorDiv = document.getElementById('createError');
+    const successDiv = document.getElementById('createSuccess');
+
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'none';
+
+    if (!name) {
+      errorDiv.textContent = 'Nome do exercício é obrigatório';
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    const result = await dbManager.createExercise(name, description, videoUrl);
+
+    if (result.success) {
+      successDiv.textContent = 'Exercício criado com sucesso!';
+      successDiv.style.display = 'block';
+      
+      document.getElementById('exerciseName').value = '';
+      document.getElementById('exerciseDescription').value = '';
+      document.getElementById('exerciseVideo').value = '';
+
+      setTimeout(() => {
+        loadExercises();
+      }, 1000);
+    } else {
+      errorDiv.textContent = result.error;
+      errorDiv.style.display = 'block';
+    }
+  }
+
+  // Carregar exercícios
+  async function loadExercises() {
+    const exercises = await dbManager.getPersonalExercises();
+    const exercisesList = document.getElementById('exercisesList');
+
+    if (exercises.length === 0) {
+      exercisesList.innerHTML = '<p>Nenhum exercício criado ainda.</p>';
+    } else {
+      exercisesList.innerHTML = exercises.map(exercise => `
+        <div class="exercise-item">
+          <div class="exercise-info">
+            <h4>${exercise.name}</h4>
+            <p>${exercise.description}</p>
+            ${exercise.videoUrl ? `<p><small>Vídeo: <a href="${exercise.videoUrl}" target="_blank">Ver</a></small></p>` : ''}
+          </div>
+          <div class="exercise-actions">
+            <button onclick="deleteExercise('${exercise.id}')" class="danger">Deletar</button>
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+
+  // Deletar exercício
+  async function deleteExercise(exerciseId) {
+    if (confirm('Tem certeza que deseja deletar este exercício?')) {
+      const result = await dbManager.deleteExercise(exerciseId);
+      if (result.success) {
+        alert('Exercício deletado com sucesso!');
+        loadExercises();
+      } else {
+        alert('Erro ao deletar exercício: ' + result.error);
+      }
+    }
+  }
+
+  // Carregar exercícios quando página for carregada
+  loadExercises();
+</script>
