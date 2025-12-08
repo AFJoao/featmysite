@@ -46,7 +46,9 @@
         </div>
 
         <h3 style="margin-top: 20px;">Exercícios Disponíveis</h3>
-        <div id="availableExercises" class="exercises-list"></div>
+        <div id="availableExercises" class="exercises-list">
+          <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
+        </div>
 
         <button onclick="clearSelection()" class="secondary" style="margin-top: 20px; width: 100%;">Limpar Seleção</button>
         <button onclick="saveWorkout()" style="margin-top: 10px; width: 100%;">Salvar Treino</button>
@@ -70,7 +72,8 @@
     description: '',
     studentId: '',
     selectedDays: {},
-    dayExercises: {}
+    dayExercises: {},
+    exercisesMap: {}
   };
 
   // Inicializar dias
@@ -99,41 +102,55 @@
 
   // Carregar alunos
   async function loadStudents() {
-    const students = await dbManager.getAllStudents();
-    const select = document.getElementById('studentSelect');
-    
-    students.forEach(student => {
-      const option = document.createElement('option');
-      option.value = student.uid;
-      option.textContent = student.name;
-      select.appendChild(option);
-    });
+    try {
+      const students = await dbManager.getAllStudents();
+      const select = document.getElementById('studentSelect');
+      
+      students.forEach(student => {
+        const option = document.createElement('option');
+        option.value = student.uid;
+        option.textContent = student.name;
+        select.appendChild(option);
+      });
 
-    select.addEventListener('change', (e) => {
-      workoutState.studentId = e.target.value;
-      updatePreview();
-    });
+      select.addEventListener('change', (e) => {
+        workoutState.studentId = e.target.value;
+        updatePreview();
+      });
+    } catch (error) {
+      console.error('Erro ao carregar alunos:', error);
+    }
   }
 
   // Carregar exercícios
   async function loadExercises() {
-    const exercises = await dbManager.getPersonalExercises();
-    const container = document.getElementById('availableExercises');
+    try {
+      const exercises = await dbManager.getPersonalExercises();
+      const container = document.getElementById('availableExercises');
 
-    if (exercises.length === 0) {
-      container.innerHTML = '<p>Nenhum exercício disponível. <a href="#/personal/exercises">Criar exercício</a></p>';
-    } else {
-      container.innerHTML = exercises.map(exercise => `
-        <div class="exercise-item">
-          <div class="exercise-info">
-            <h4>${exercise.name}</h4>
-            <p>${exercise.description}</p>
+      if (exercises.length === 0) {
+        container.innerHTML = '<p>Nenhum exercício disponível. <a href="#/personal/exercises">Criar exercício</a></p>';
+      } else {
+        // Armazenar exercícios no mapa
+        exercises.forEach(ex => {
+          workoutState.exercisesMap[ex.id] = ex;
+        });
+
+        container.innerHTML = exercises.map(exercise => `
+          <div class="exercise-item">
+            <div class="exercise-info">
+              <h4>${exercise.name}</h4>
+              <p>${exercise.description}</p>
+            </div>
+            <div class="exercise-actions">
+              <button onclick="addExerciseToDay('${exercise.id}', '${exercise.name.replace(/'/g, "\\'")}', '${exercise.videoUrl || ''}')" class="secondary">Adicionar</button>
+            </div>
           </div>
-          <div class="exercise-actions">
-            <button onclick="addExerciseToDay('${exercise.id}', '${exercise.name}')" class="secondary">Adicionar</button>
-          </div>
-        </div>
-      `).join('');
+        `).join('');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar exercícios:', error);
+      document.getElementById('availableExercises').innerHTML = '<p>Erro ao carregar exercícios.</p>';
     }
   }
 
@@ -148,7 +165,7 @@
   });
 
   // Adicionar exercício ao dia
-  function addExerciseToDay(exerciseId, exerciseName) {
+  function addExerciseToDay(exerciseId, exerciseName, videoUrl) {
     // Encontrar primeiro dia selecionado
     const selectedDay = Object.keys(workoutState.selectedDays).find(day => workoutState.selectedDays[day]);
     
@@ -170,6 +187,7 @@
     workoutState.dayExercises[selectedDay].push({
       exerciseId: exerciseId,
       exerciseName: exerciseName,
+      videoUrl: videoUrl || '',
       sets: sets,
       reps: reps,
       notes: notes
@@ -278,22 +296,28 @@
       }
     });
 
-    const result = await dbManager.createWorkout(
-      name,
-      description,
-      daysData,
-      document.getElementById('studentSelect').value || null
-    );
+    try {
+      const result = await dbManager.createWorkout(
+        name,
+        description,
+        daysData,
+        document.getElementById('studentSelect').value || null
+      );
 
-    if (result.success) {
-      successDiv.textContent = 'Treino salvo com sucesso!';
-      successDiv.style.display = 'block';
-      
-      setTimeout(() => {
-        router.goToPersonalDashboard();
-      }, 1500);
-    } else {
-      errorDiv.textContent = result.error;
+      if (result.success) {
+        successDiv.textContent = 'Treino salvo com sucesso!';
+        successDiv.style.display = 'block';
+        
+        setTimeout(() => {
+          router.goToPersonalDashboard();
+        }, 1500);
+      } else {
+        errorDiv.textContent = result.error;
+        errorDiv.style.display = 'block';
+      }
+    } catch (error) {
+      console.error('Erro ao salvar treino:', error);
+      errorDiv.textContent = 'Erro ao salvar treino: ' + error.message;
       errorDiv.style.display = 'block';
     }
   }

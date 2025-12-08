@@ -34,6 +34,71 @@ class DatabaseManager {
   }
 
   /**
+   * Obter alunos vinculados ao Personal atual (CORRIGIDO)
+   */
+  async getMyStudents() {
+    try {
+      const user = authManager.getCurrentUser();
+      if (!user) {
+        console.log('Usuário não autenticado');
+        return [];
+      }
+
+      console.log('Buscando alunos para o Personal:', user.uid);
+
+      // Método 1: Buscar pela lista de students no documento do Personal
+      const userData = await this.getCurrentUserData();
+      console.log('Dados do Personal:', userData);
+
+      if (userData && userData.students && userData.students.length > 0) {
+        console.log('IDs dos alunos na lista:', userData.students);
+        
+        const students = [];
+        for (const studentId of userData.students) {
+          const studentData = await this.getUserData(studentId);
+          if (studentData) {
+            students.push({
+              uid: studentId,
+              ...studentData
+            });
+          }
+        }
+        
+        console.log('Alunos encontrados (método 1):', students.length);
+        return students;
+      }
+
+      // Método 2 (fallback): Buscar alunos que tem este Personal no campo personalId
+      console.log('Tentando método 2: buscar por personalId');
+      const snapshot = await db.collection('users')
+        .where('personalId', '==', user.uid)
+        .where('userType', '==', 'student')
+        .get();
+
+      const students = snapshot.docs.map(doc => ({
+        uid: doc.id,
+        ...doc.data()
+      }));
+
+      console.log('Alunos encontrados (método 2):', students.length);
+
+      // Se encontrou alunos pelo método 2, atualizar a lista no Personal
+      if (students.length > 0) {
+        const studentIds = students.map(s => s.uid);
+        await db.collection('users').doc(user.uid).update({
+          students: studentIds
+        });
+        console.log('Lista de alunos atualizada no Personal');
+      }
+
+      return students;
+    } catch (error) {
+      console.error('Erro ao obter alunos:', error);
+      return [];
+    }
+  }
+
+  /**
    * Criar novo exercício
    */
   async createExercise(name, description, videoUrl) {
@@ -46,7 +111,7 @@ class DatabaseManager {
         id: exerciseRef.id,
         name: name,
         description: description,
-        videoUrl: videoUrl,
+        videoUrl: videoUrl || '',
         createdBy: user.uid,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -266,18 +331,12 @@ class DatabaseManager {
   }
 
   /**
-   * Obter todos os usuários (para seleção de alunos)
+   * Obter todos os usuários do tipo aluno (para seleção)
+   * ATUALIZADO: Agora retorna apenas alunos vinculados ao Personal
    */
   async getAllStudents() {
     try {
-      const snapshot = await db.collection('users')
-        .where('userType', '==', 'student')
-        .get();
-
-      return snapshot.docs.map(doc => ({
-        uid: doc.id,
-        ...doc.data()
-      }));
+      return await this.getMyStudents();
     } catch (error) {
       console.error('Erro ao obter alunos:', error);
       return [];

@@ -7,58 +7,72 @@
   </header>
 
   <div style="max-width: 1000px; margin: 30px auto;">
-    <h2>Bem-vindo, <span id="studentName"></span>!</h2>
+    <h2>Bem-vindo, <span id="studentName">...</span>!</h2>
     
     <h3 style="margin-top: 30px; margin-bottom: 15px;">Treinos Atribuídos</h3>
-    <div id="workoutsList" class="workouts-list"></div>
+    <div id="workoutsList" class="workouts-list">
+      <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
+    </div>
   </div>
 </div>
 
 <script>
   // Logout
-  document.getElementById('logoutBtn').addEventListener('click', async (e) => {
-    e.preventDefault();
-    await authManager.logout();
-    router.goToLogin();
-  });
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await authManager.logout();
+      router.goToLogin();
+    });
+  }
 
   // Carregar dados do Aluno
   async function loadStudentDashboard() {
-    const user = authManager.getCurrentUser();
-    const userData = await dbManager.getCurrentUserData();
-    
-    if (userData) {
-      document.getElementById('studentName').textContent = userData.name;
-    }
+    try {
+      const userData = await dbManager.getCurrentUserData();
+      
+      if (userData) {
+        document.getElementById('studentName').textContent = userData.name;
+      }
 
-    // Carregar treinos
-    const workouts = await dbManager.getStudentWorkouts();
-    const workoutsList = document.getElementById('workoutsList');
+      // Carregar treinos
+      const workouts = await dbManager.getStudentWorkouts();
+      const workoutsList = document.getElementById('workoutsList');
 
-    if (workouts.length === 0) {
-      workoutsList.innerHTML = '<p>Nenhum treino atribuído ainda. Aguarde seu Personal Trainer atribuir um treino.</p>';
-    } else {
-      workoutsList.innerHTML = workouts.map(workout => `
-        <div class="card">
-          <h4>${workout.name}</h4>
-          <p>${workout.description}</p>
-          <p><strong>Dias:</strong> ${Object.keys(workout.days).filter(day => workout.days[day].length > 0).map(day => {
-            const dayNames = {
-              monday: 'Segunda',
-              tuesday: 'Terça',
-              wednesday: 'Quarta',
-              thursday: 'Quinta',
-              friday: 'Sexta',
-              saturday: 'Sábado',
-              sunday: 'Domingo'
-            };
-            return dayNames[day];
-          }).join(', ')}</p>
-          <div style="margin-top: 10px;">
-            <button onclick="viewWorkout('${workout.id}')" class="secondary">Ver Treino</button>
-          </div>
-        </div>
-      `).join('');
+      if (workouts.length === 0) {
+        workoutsList.innerHTML = '<p>Nenhum treino atribuído ainda. Aguarde seu Personal Trainer atribuir um treino.</p>';
+      } else {
+        const dayNames = {
+          monday: 'Segunda',
+          tuesday: 'Terça',
+          wednesday: 'Quarta',
+          thursday: 'Quinta',
+          friday: 'Sexta',
+          saturday: 'Sábado',
+          sunday: 'Domingo'
+        };
+
+        workoutsList.innerHTML = workouts.map(workout => {
+          const daysWithExercises = Object.keys(workout.days || {}).filter(day => {
+            return workout.days[day] && workout.days[day].length > 0;
+          }).map(day => dayNames[day] || day);
+
+          return `
+            <div class="card">
+              <h4>${workout.name}</h4>
+              <p>${workout.description}</p>
+              <p><strong>Dias:</strong> ${daysWithExercises.length > 0 ? daysWithExercises.join(', ') : 'Nenhum dia definido'}</p>
+              <div style="margin-top: 10px;">
+                <button onclick="viewWorkout('${workout.id}')" class="secondary">Ver Treino</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dashboard:', error);
+      document.getElementById('workoutsList').innerHTML = '<p>Erro ao carregar treinos.</p>';
     }
   }
 

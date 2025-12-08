@@ -17,31 +17,51 @@
     <button type="submit">Entrar</button>
     
     <p style="margin-top: 15px; text-align: center;">
-      Não tem conta? <a href="#/signup" style="cursor: pointer;">Cadastre-se aqui</a>
+      Não tem conta? <a href="#/signup">Cadastre-se aqui</a>
     </p>
   </form>
 </div>
 
 <script>
-  document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-    const errorDiv = document.getElementById('loginError');
-    
-    const result = await authManager.login(email, password);
-    
-    if (result.success) {
-      // Redirecionar para dashboard apropriado
-      if (result.userType === 'personal') {
-        router.goToPersonalDashboard();
-      } else {
-        router.goToStudentDashboard();
+  const loginForm = document.getElementById('loginForm');
+  
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const errorDiv = document.getElementById('loginError');
+      
+      // Mostrar loading
+      const submitBtn = loginForm.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Entrando...';
+      submitBtn.disabled = true;
+      
+      try {
+        const result = await authManager.login(email, password);
+        
+        if (result.success) {
+          // Redirecionar para dashboard apropriado
+          if (result.userType === 'personal') {
+            router.goToPersonalDashboard();
+          } else {
+            router.goToStudentDashboard();
+          }
+        } else {
+          errorDiv.textContent = result.error;
+          errorDiv.style.display = 'block';
+          submitBtn.textContent = originalText;
+          submitBtn.disabled = false;
+        }
+      } catch (error) {
+        console.error('Erro no login:', error);
+        errorDiv.textContent = 'Erro ao fazer login. Tente novamente.';
+        errorDiv.style.display = 'block';
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
       }
-    } else {
-      errorDiv.textContent = result.error;
-      errorDiv.style.display = 'block';
-    }
-  });
+    });
+  }
 </script>

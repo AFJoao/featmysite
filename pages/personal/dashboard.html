@@ -9,48 +9,153 @@
   </header>
 
   <div style="max-width: 1000px; margin: 30px auto;">
-    <h2>Bem-vindo, <span id="personalName"></span>!</h2>
+    <h2>Bem-vindo, <span id="personalName">...</span>!</h2>
     
+    <!-- Card com Código de Referência -->
+    <div class="card" style="background-color: #000000; color: #ffffff; margin: 20px 0;">
+      <h3 style="margin-bottom: 10px;">Seu Código de Referência</h3>
+      <p style="font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 15px 0;" id="referralCode">------</p>
+      <p style="margin-top: 10px; font-size: 14px;">Compartilhe este código com seus alunos para que eles possam se vincular a você.</p>
+      <button onclick="copyReferralCode()" class="secondary" style="margin-top: 15px; background-color: #ffffff; color: #000000;">
+        📋 Copiar Código
+      </button>
+    </div>
+
+    <!-- Meus Alunos -->
+    <h3 style="margin-top: 30px; margin-bottom: 15px;">Meus Alunos (<span id="studentsCount">0</span>)</h3>
+    <div id="studentsList" class="students-list">
+      <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
+    </div>
+
+    <!-- Meus Treinos -->
     <h3 style="margin-top: 30px; margin-bottom: 15px;">Meus Treinos</h3>
-    <div id="workoutsList" class="workouts-list"></div>
+    <div id="workoutsList" class="workouts-list">
+      <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
+    </div>
   </div>
 </div>
 
 <script>
+  let currentReferralCode = '';
+
   // Logout
-  document.getElementById('logoutBtn').addEventListener('click', async (e) => {
-    e.preventDefault();
-    await authManager.logout();
-    router.goToLogin();
-  });
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await authManager.logout();
+      router.goToLogin();
+    });
+  }
+
+  // Copiar código de referência
+  function copyReferralCode() {
+    navigator.clipboard.writeText(currentReferralCode).then(() => {
+      alert('Código copiado! Cole e compartilhe com seus alunos.');
+    }).catch(err => {
+      // Fallback para navegadores mais antigos
+      const textarea = document.createElement('textarea');
+      textarea.value = currentReferralCode;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      alert('Código copiado! Cole e compartilhe com seus alunos.');
+    });
+  }
 
   // Carregar dados do Personal
   async function loadPersonalDashboard() {
-    const user = authManager.getCurrentUser();
-    const userData = await dbManager.getCurrentUserData();
-    
-    if (userData) {
-      document.getElementById('personalName').textContent = userData.name;
+    try {
+      const userData = await dbManager.getCurrentUserData();
+      
+      if (userData) {
+        document.getElementById('personalName').textContent = userData.name;
+        
+        // Mostrar código de referência
+        if (userData.referralCode) {
+          currentReferralCode = userData.referralCode;
+          document.getElementById('referralCode').textContent = userData.referralCode;
+        }
+      }
+
+      // Carregar alunos vinculados
+      await loadStudents();
+
+      // Carregar treinos
+      await loadWorkouts();
+    } catch (error) {
+      console.error('Erro ao carregar dashboard:', error);
     }
+  }
 
-    // Carregar treinos
-    const workouts = await dbManager.getPersonalWorkouts();
-    const workoutsList = document.getElementById('workoutsList');
+  // Carregar alunos
+  async function loadStudents() {
+    try {
+      const students = await dbManager.getMyStudents();
+      const studentsList = document.getElementById('studentsList');
+      const studentsCount = document.getElementById('studentsCount');
 
-    if (workouts.length === 0) {
-      workoutsList.innerHTML = '<p>Nenhum treino criado ainda. <a href="#/personal/create-workout">Criar novo treino</a></p>';
-    } else {
-      workoutsList.innerHTML = workouts.map(workout => `
-        <div class="card">
-          <h4>${workout.name}</h4>
-          <p>${workout.description}</p>
-          <p><strong>Aluno:</strong> ${workout.studentId ? 'Associado' : 'Não associado'}</p>
-          <div style="margin-top: 10px;">
-            <button onclick="editWorkout('${workout.id}')" class="secondary">Editar</button>
-            <button onclick="deleteWorkout('${workout.id}')" class="danger">Deletar</button>
+      studentsCount.textContent = students.length;
+
+      if (students.length === 0) {
+        studentsList.innerHTML = '<p style="color: #666;">Nenhum aluno vinculado ainda. Compartilhe seu código de referência!</p>';
+      } else {
+        studentsList.innerHTML = students.map(student => `
+          <div class="card">
+            <h4>👤 ${student.name}</h4>
+            <p><strong>Email:</strong> ${student.email}</p>
+            <p><strong>Cadastrado em:</strong> ${student.createdAt ? new Date(student.createdAt.seconds * 1000).toLocaleDateString('pt-BR') : 'N/A'}</p>
           </div>
-        </div>
-      `).join('');
+        `).join('');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar alunos:', error);
+      document.getElementById('studentsList').innerHTML = '<p>Erro ao carregar alunos.</p>';
+    }
+  }
+
+  // Carregar treinos
+  async function loadWorkouts() {
+    try {
+      const workouts = await dbManager.getPersonalWorkouts();
+      const workoutsList = document.getElementById('workoutsList');
+
+      if (workouts.length === 0) {
+        workoutsList.innerHTML = '<p>Nenhum treino criado ainda. <a href="#/personal/create-workout">Criar novo treino</a></p>';
+      } else {
+        // Buscar nomes dos alunos
+        const studentsMap = {};
+        const students = await dbManager.getMyStudents();
+        students.forEach(s => {
+          studentsMap[s.uid] = s.name;
+        });
+
+        workoutsList.innerHTML = workouts.map(workout => {
+          const daysCount = Object.keys(workout.days || {}).filter(day => {
+            return workout.days[day] && workout.days[day].length > 0;
+          }).length;
+          
+          const studentName = workout.studentId && studentsMap[workout.studentId] 
+            ? studentsMap[workout.studentId] 
+            : 'Não associado';
+          
+          return `
+            <div class="card">
+              <h4>${workout.name}</h4>
+              <p>${workout.description}</p>
+              <p><strong>Dias:</strong> ${daysCount} dia(s)</p>
+              <p><strong>Aluno:</strong> ${studentName}</p>
+              <div style="margin-top: 10px;">
+                <button onclick="deleteWorkout('${workout.id}')" class="danger">Deletar</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar treinos:', error);
+      document.getElementById('workoutsList').innerHTML = '<p>Erro ao carregar treinos.</p>';
     }
   }
 
@@ -60,20 +165,24 @@
       const result = await dbManager.deleteWorkout(workoutId);
       if (result.success) {
         alert('Treino deletado com sucesso!');
-        loadPersonalDashboard();
+        loadWorkouts();
       } else {
         alert('Erro ao deletar treino: ' + result.error);
       }
     }
   }
 
-  // Editar treino (redirecionar para página de criação)
-  function editWorkout(workoutId) {
-    // Armazenar ID do treino em sessão para edição
-    sessionStorage.setItem('editWorkoutId', workoutId);
-    router.goToCreateWorkout();
-  }
-
   // Carregar dashboard quando página for carregada
   loadPersonalDashboard();
 </script>
+
+<style>
+  .students-list .card,
+  .workouts-list .card {
+    margin-bottom: 15px;
+  }
+
+  .students-list .card h4 {
+    margin-bottom: 10px;
+  }
+</style>

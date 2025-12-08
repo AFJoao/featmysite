@@ -1,9 +1,5 @@
 /**
  * Configuração do Firebase
- * 
- * IMPORTANTE: Substitua os valores abaixo pelas credenciais do seu projeto Firebase
- * Você encontrará esses valores em:
- * Firebase Console > Seu Projeto > Configurações > Aplicativos > Copiar configuração
  */
 
 const firebaseConfig = {
@@ -17,7 +13,9 @@ const firebaseConfig = {
 };
 
 // Inicializar Firebase
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 
 // Referências globais para Auth e Firestore
 const auth = firebase.auth();
@@ -31,3 +29,4 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
 window.firebaseConfig = firebaseConfig;
 window.auth = auth;
 window.db = db;
+window.firebase = firebase;

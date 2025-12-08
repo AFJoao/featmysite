@@ -3,6 +3,7 @@
     <h2>Cadastro</h2>
     
     <div id="signupError" class="alert error" style="display: none;"></div>
+    <div id="signupSuccess" class="alert success" style="display: none;"></div>
     
     <div class="form-group">
       <label for="signupName">Nome:</label>
@@ -16,12 +17,12 @@
 
     <div class="form-group">
       <label for="signupPassword">Senha:</label>
-      <input type="password" id="signupPassword" required>
+      <input type="password" id="signupPassword" required minlength="6">
     </div>
 
     <div class="form-group">
       <label for="signupPasswordConfirm">Confirmar Senha:</label>
-      <input type="password" id="signupPasswordConfirm" required>
+      <input type="password" id="signupPasswordConfirm" required minlength="6">
     </div>
 
     <div class="form-group">
@@ -38,44 +39,158 @@
       </div>
     </div>
 
+    <!-- Campo de código de referência (só aparece para alunos) -->
+    <div class="form-group" id="referralCodeGroup" style="display: none;">
+      <label for="referralCode">Código do Personal Trainer:</label>
+      <input type="text" id="referralCode" placeholder="Ex: ABC123" maxlength="6" style="text-transform: uppercase;">
+      <small style="display: block; margin-top: 5px; color: #666;">
+        Solicite o código ao seu Personal Trainer
+      </small>
+      <div id="codeValidation" style="margin-top: 5px; display: none;"></div>
+    </div>
+
     <button type="submit">Cadastrar</button>
     
     <p style="margin-top: 15px; text-align: center;">
-      Já tem conta? <a href="#/login" style="cursor: pointer;">Faça login aqui</a>
+      Já tem conta? <a href="#/login">Faça login aqui</a>
     </p>
   </form>
 </div>
 
 <script>
-  document.getElementById('signupForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const name = document.getElementById('signupName').value;
-    const email = document.getElementById('signupEmail').value;
-    const password = document.getElementById('signupPassword').value;
-    const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
-    const userType = document.querySelector('input[name="userType"]:checked').value;
-    const errorDiv = document.getElementById('signupError');
-    
-    // Validar senhas
-    if (password !== passwordConfirm) {
-      errorDiv.textContent = 'As senhas não conferem';
-      errorDiv.style.display = 'block';
-      return;
-    }
-    
-    const result = await authManager.signup(email, password, name, userType);
-    
-    if (result.success) {
-      // Redirecionar para dashboard apropriado
-      if (result.userType === 'personal') {
-        router.goToPersonalDashboard();
+  const signupForm = document.getElementById('signupForm');
+  const referralCodeGroup = document.getElementById('referralCodeGroup');
+  const referralCodeInput = document.getElementById('referralCode');
+  const codeValidation = document.getElementById('codeValidation');
+  
+  // Mostrar/ocultar campo de código de referência
+  document.querySelectorAll('input[name="userType"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      if (e.target.value === 'student') {
+        referralCodeGroup.style.display = 'block';
+        referralCodeInput.required = true;
       } else {
-        router.goToStudentDashboard();
+        referralCodeGroup.style.display = 'none';
+        referralCodeInput.required = false;
+        referralCodeInput.value = '';
+        codeValidation.style.display = 'none';
       }
-    } else {
-      errorDiv.textContent = result.error;
-      errorDiv.style.display = 'block';
-    }
+    });
   });
+
+  // Validar código em tempo real
+  let validationTimeout;
+  if (referralCodeInput) {
+    referralCodeInput.addEventListener('input', (e) => {
+      const code = e.target.value.toUpperCase();
+      e.target.value = code;
+      
+      if (code.length === 6) {
+        clearTimeout(validationTimeout);
+        validationTimeout = setTimeout(async () => {
+          codeValidation.textContent = 'Verificando...';
+          codeValidation.style.display = 'block';
+          codeValidation.style.color = '#666';
+          
+          const result = await authManager.checkReferralCode(code);
+          
+          if (result.exists) {
+            codeValidation.textContent = '✓ Personal encontrado: ' + result.personalName;
+            codeValidation.style.color = '#00cc00';
+          } else {
+            codeValidation.textContent = '✗ Código inválido';
+            codeValidation.style.color = '#cc0000';
+          }
+        }, 500);
+      } else {
+        codeValidation.style.display = 'none';
+      }
+    });
+  }
+  
+  if (signupForm) {
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const name = document.getElementById('signupName').value;
+      const email = document.getElementById('signupEmail').value;
+      const password = document.getElementById('signupPassword').value;
+      const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
+      const userTypeElement = document.querySelector('input[name="userType"]:checked');
+      const referralCode = document.getElementById('referralCode').value;
+      const errorDiv = document.getElementById('signupError');
+      const successDiv = document.getElementById('signupSuccess');
+      
+      errorDiv.style.display = 'none';
+      successDiv.style.display = 'none';
+      
+      // Validar senhas
+      if (password !== passwordConfirm) {
+        errorDiv.textContent = 'As senhas não conferem';
+        errorDiv.style.display = 'block';
+        return;
+      }
+      
+      if (!userTypeElement) {
+        errorDiv.textContent = 'Selecione o tipo de usuário';
+        errorDiv.style.display = 'block';
+        return;
+      }
+      
+      const userType = userTypeElement.value;
+      
+      // Validar código de referência para alunos
+      if (userType === 'student' && !referralCode) {
+        errorDiv.textContent = 'Digite o código do seu Personal Trainer';
+        errorDiv.style.display = 'block';
+        return;
+      }
+      
+      // Mostrar loading
+      const submitBtn = signupForm.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Cadastrando...';
+      submitBtn.disabled = true;
+      
+      try {
+        const result = await authManager.signup(
+          email, 
+          password, 
+          name, 
+          userType,
+          userType === 'student' ? referralCode : null
+        );
+        
+        if (result.success) {
+          // Se é Personal, mostrar o código gerado
+          if (result.userType === 'personal' && result.referralCode) {
+            successDiv.innerHTML = `
+              <strong>Cadastro realizado com sucesso!</strong><br>
+              Seu código de referência é: <strong style="font-size: 18px;">${result.referralCode}</strong><br>
+              Compartilhe este código com seus alunos.
+            `;
+            successDiv.style.display = 'block';
+            
+            setTimeout(() => {
+              router.goToPersonalDashboard();
+            }, 3000);
+          } else {
+            // Aluno - redirecionar imediatamente
+            router.goToStudentDashboard();
+          }
+        } else {
+          errorDiv.textContent = result.error;
+          errorDiv.style.display = 'block';
+          submitBtn.textContent = originalText;
+          submitBtn.disabled = false;
+        }
+      } catch (error) {
+        console.error('Erro no cadastro:', error);
+        errorDiv.textContent = 'Erro ao cadastrar. Tente novamente.';
+        errorDiv.style.display = 'block';
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+      }
+    });
+  }
 </script>

@@ -28,11 +28,13 @@ class Router {
 
     // Monitorar mudanças de hash
     window.addEventListener('hashchange', () => this.navigate(window.location.hash.slice(1)));
+    
+    // Aguardar autenticação estar pronta antes de navegar
+    this.isReady = false;
   }
 
   /**
    * Navegar para uma rota
-   * @param {string} path - Caminho da rota
    */
   navigate(path = '/') {
     // Garantir que o caminho comece com /
@@ -75,7 +77,6 @@ class Router {
 
   /**
    * Carregar página via AJAX
-   * @param {string} path - Caminho da página
    */
   async loadPage(path) {
     const pagePath = this.routes[path];
@@ -104,14 +105,24 @@ class Router {
           const newScript = document.createElement('script');
           newScript.textContent = script.textContent;
           document.body.appendChild(newScript);
+          // Remover script após execução para evitar duplicação
+          setTimeout(() => document.body.removeChild(newScript), 100);
         });
       }
 
       // Atualizar URL
-      window.location.hash = '#' + path;
+      if (window.location.hash !== '#' + path) {
+        window.location.hash = '#' + path;
+      }
     } catch (error) {
       console.error('Erro ao carregar página:', error);
-      document.getElementById('app').innerHTML = '<p>Erro ao carregar página</p>';
+      document.getElementById('app').innerHTML = `
+        <div style="padding: 20px; text-align: center;">
+          <h2>Erro ao carregar página</h2>
+          <p>${error.message}</p>
+          <button onclick="window.location.reload()">Recarregar</button>
+        </div>
+      `;
     }
   }
 
@@ -163,6 +174,18 @@ class Router {
   goToViewWorkout() {
     this.navigate('/student/view-workout');
   }
+
+  /**
+   * Inicializar router
+   */
+  init() {
+    // Aguardar um momento para autenticação estar pronta
+    setTimeout(() => {
+      this.isReady = true;
+      const initialPath = window.location.hash.slice(1) || '/';
+      this.navigate(initialPath);
+    }, 500);
+  }
 }
 
 // Instância global do Router
@@ -173,7 +196,5 @@ window.router = router;
 
 // Inicializar roteamento quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', () => {
-  // Obter rota inicial da URL
-  const initialPath = window.location.hash.slice(1) || '/';
-  router.navigate(initialPath);
+  router.init();
 });

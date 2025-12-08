@@ -6,8 +6,12 @@ service cloud.firestore {
     match /users/{userId} {
       // Usuário pode ler seus próprios dados
       allow read: if request.auth.uid == userId;
+      
       // Usuário pode escrever seus próprios dados
       allow write: if request.auth.uid == userId;
+      
+      // Permitir leitura pública do referralCode para validação no cadastro
+      allow read: if request.auth != null && resource.data.userType == 'personal';
     }
 
     // Coleção de exercícios
