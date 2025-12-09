@@ -92,7 +92,9 @@
           codeValidation.style.display = 'block';
           codeValidation.style.color = '#666';
           
+          console.log('Validando código:', code);
           const result = await authManager.checkReferralCode(code);
+          console.log('Resultado validação:', result);
           
           if (result.exists) {
             codeValidation.textContent = '✓ Personal encontrado: ' + result.personalName;
@@ -117,7 +119,7 @@
       const password = document.getElementById('signupPassword').value;
       const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
       const userTypeElement = document.querySelector('input[name="userType"]:checked');
-      const referralCode = document.getElementById('referralCode').value;
+      const referralCode = document.getElementById('referralCode').value.trim();
       const errorDiv = document.getElementById('signupError');
       const successDiv = document.getElementById('signupSuccess');
       
@@ -140,10 +142,29 @@
       const userType = userTypeElement.value;
       
       // Validar código de referência para alunos
-      if (userType === 'student' && !referralCode) {
-        errorDiv.textContent = 'Digite o código do seu Personal Trainer';
-        errorDiv.style.display = 'block';
-        return;
+      if (userType === 'student') {
+        if (!referralCode) {
+          errorDiv.textContent = 'Digite o código do seu Personal Trainer';
+          errorDiv.style.display = 'block';
+          return;
+        }
+
+        if (referralCode.length !== 6) {
+          errorDiv.textContent = 'O código deve ter exatamente 6 caracteres';
+          errorDiv.style.display = 'block';
+          return;
+        }
+
+        // Verificar código antes de cadastrar
+        console.log('Verificando código antes do cadastro:', referralCode);
+        const codeCheck = await authManager.checkReferralCode(referralCode);
+        console.log('Verificação final:', codeCheck);
+        
+        if (!codeCheck.exists) {
+          errorDiv.textContent = 'Código de referência inválido. Verifique com seu Personal Trainer.';
+          errorDiv.style.display = 'block';
+          return;
+        }
       }
       
       // Mostrar loading
@@ -161,22 +182,34 @@
           userType === 'student' ? referralCode : null
         );
         
+        console.log('Resultado do cadastro:', result);
+        
         if (result.success) {
           // Se é Personal, mostrar o código gerado
           if (result.userType === 'personal' && result.referralCode) {
             successDiv.innerHTML = `
               <strong>Cadastro realizado com sucesso!</strong><br>
               Seu código de referência é: <strong style="font-size: 18px;">${result.referralCode}</strong><br>
-              Compartilhe este código com seus alunos.
+              Compartilhe este código com seus alunos.<br>
+              <small>Redirecionando em 4 segundos...</small>
             `;
             successDiv.style.display = 'block';
             
             setTimeout(() => {
               router.goToPersonalDashboard();
-            }, 3000);
+            }, 4000);
           } else {
-            // Aluno - redirecionar imediatamente
-            router.goToStudentDashboard();
+            // Aluno - mostrar mensagem de sucesso
+            successDiv.innerHTML = `
+              <strong>Cadastro realizado com sucesso!</strong><br>
+              Você foi vinculado ao seu Personal Trainer.<br>
+              <small>Redirecionando em 2 segundos...</small>
+            `;
+            successDiv.style.display = 'block';
+            
+            setTimeout(() => {
+              router.goToStudentDashboard();
+            }, 2000);
           }
         } else {
           errorDiv.textContent = result.error;

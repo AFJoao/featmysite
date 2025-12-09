@@ -15,14 +15,19 @@
     <div class="card" style="background-color: #000000; color: #ffffff; margin: 20px 0;">
       <h3 style="margin-bottom: 10px;">Seu Código de Referência</h3>
       <p style="font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 15px 0;" id="referralCode">------</p>
-      <p style="margin-top: 10px; font-size: 14px;">Compartilhe este código com seus alunos para que eles possam se vincular a você.</p>
+      <p style="margin-top: 10px; font-size: 14px;">Compartilhe este código com seus alunos para que eles possam se vincular a você no cadastro.</p>
       <button onclick="copyReferralCode()" class="secondary" style="margin-top: 15px; background-color: #ffffff; color: #000000;">
         📋 Copiar Código
       </button>
     </div>
 
     <!-- Meus Alunos -->
-    <h3 style="margin-top: 30px; margin-bottom: 15px;">Meus Alunos (<span id="studentsCount">0</span>)</h3>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px; margin-bottom: 15px;">
+      <h3 style="margin: 0;">Meus Alunos (<span id="studentsCount">0</span>)</h3>
+      <button onclick="loadStudents()" class="secondary" style="padding: 8px 15px; font-size: 12px;">
+        🔄 Atualizar Lista
+      </button>
+    </div>
     <div id="studentsList" class="students-list">
       <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
     </div>
@@ -51,23 +56,27 @@
   // Copiar código de referência
   function copyReferralCode() {
     navigator.clipboard.writeText(currentReferralCode).then(() => {
-      alert('Código copiado! Cole e compartilhe com seus alunos.');
+      alert('✓ Código copiado!\n\nCompartilhe este código com seus alunos para que eles possam se vincular a você no cadastro.');
     }).catch(err => {
       // Fallback para navegadores mais antigos
       const textarea = document.createElement('textarea');
       textarea.value = currentReferralCode;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
       document.body.appendChild(textarea);
       textarea.select();
       document.execCommand('copy');
       document.body.removeChild(textarea);
-      alert('Código copiado! Cole e compartilhe com seus alunos.');
+      alert('✓ Código copiado!\n\nCompartilhe este código com seus alunos para que eles possam se vincular a você no cadastro.');
     });
   }
 
   // Carregar dados do Personal
   async function loadPersonalDashboard() {
     try {
+      console.log('=== CARREGANDO DASHBOARD DO PERSONAL ===');
       const userData = await dbManager.getCurrentUserData();
+      console.log('Dados do usuário:', userData);
       
       if (userData) {
         document.getElementById('personalName').textContent = userData.name;
@@ -76,6 +85,9 @@
         if (userData.referralCode) {
           currentReferralCode = userData.referralCode;
           document.getElementById('referralCode').textContent = userData.referralCode;
+          console.log('Código de referência:', userData.referralCode);
+        } else {
+          console.warn('Personal não tem código de referência!');
         }
       }
 
@@ -92,14 +104,29 @@
   // Carregar alunos
   async function loadStudents() {
     try {
-      const students = await dbManager.getMyStudents();
+      console.log('=== CARREGANDO LISTA DE ALUNOS ===');
       const studentsList = document.getElementById('studentsList');
       const studentsCount = document.getElementById('studentsCount');
+
+      // Mostrar loading
+      studentsList.innerHTML = '<div class="loading"><div class="spinner"></div><p>Carregando alunos...</p></div>';
+
+      const students = await dbManager.getMyStudents();
+      console.log('Alunos retornados:', students);
 
       studentsCount.textContent = students.length;
 
       if (students.length === 0) {
-        studentsList.innerHTML = '<p style="color: #666;">Nenhum aluno vinculado ainda. Compartilhe seu código de referência!</p>';
+        studentsList.innerHTML = `
+          <div class="card" style="background-color: #f5f5f5;">
+            <p style="margin: 0; color: #666;">
+              Nenhum aluno vinculado ainda.<br>
+              <strong>Como vincular alunos:</strong><br>
+              1. Compartilhe seu código de referência acima<br>
+              2. Seus alunos devem usar este código ao se cadastrarem como "Aluno"
+            </p>
+          </div>
+        `;
       } else {
         studentsList.innerHTML = students.map(student => `
           <div class="card">
@@ -110,8 +137,16 @@
         `).join('');
       }
     } catch (error) {
-      console.error('Erro ao carregar alunos:', error);
-      document.getElementById('studentsList').innerHTML = '<p>Erro ao carregar alunos.</p>';
+      console.error('=== ERRO AO CARREGAR ALUNOS ===');
+      console.error('Erro completo:', error);
+      document.getElementById('studentsList').innerHTML = `
+        <div class="card" style="border-color: #cc0000;">
+          <p style="color: #cc0000;">
+            <strong>Erro ao carregar alunos.</strong><br>
+            ${error.message}
+          </p>
+        </div>
+      `;
     }
   }
 

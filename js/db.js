@@ -13,7 +13,7 @@ class DatabaseManager {
       if (!user) return null;
 
       const userDoc = await db.collection('users').doc(user.uid).get();
-      return userDoc.exists ? userDoc.data() : null;
+      return userDoc.exists ? { id: userDoc.id, ...userDoc.data() } : null;
     } catch (error) {
       console.error('Erro ao obter dados do usuário:', error);
       return null;
@@ -26,7 +26,7 @@ class DatabaseManager {
   async getUserData(uid) {
     try {
       const userDoc = await db.collection('users').doc(uid).get();
-      return userDoc.exists ? userDoc.data() : null;
+      return userDoc.exists ? { id: userDoc.id, ...userDoc.data() } : null;
     } catch (error) {
       console.error('Erro ao obter dados do usuário:', error);
       return null;
@@ -34,7 +34,7 @@ class DatabaseManager {
   }
 
   /**
-   * Obter alunos vinculados ao Personal atual (CORRIGIDO)
+   * Obter alunos vinculados ao Personal atual (CORRIGIDO E SIMPLIFICADO)
    */
   async getMyStudents() {
     try {
@@ -44,56 +44,46 @@ class DatabaseManager {
         return [];
       }
 
-      console.log('Buscando alunos para o Personal:', user.uid);
+      console.log('=== BUSCANDO ALUNOS ===');
+      console.log('Personal UID:', user.uid);
 
-      // Método 1: Buscar pela lista de students no documento do Personal
-      const userData = await this.getCurrentUserData();
-      console.log('Dados do Personal:', userData);
-
-      if (userData && userData.students && userData.students.length > 0) {
-        console.log('IDs dos alunos na lista:', userData.students);
-        
-        const students = [];
-        for (const studentId of userData.students) {
-          const studentData = await this.getUserData(studentId);
-          if (studentData) {
-            students.push({
-              uid: studentId,
-              ...studentData
-            });
-          }
-        }
-        
-        console.log('Alunos encontrados (método 1):', students.length);
-        return students;
-      }
-
-      // Método 2 (fallback): Buscar alunos que tem este Personal no campo personalId
-      console.log('Tentando método 2: buscar por personalId');
+      // Buscar TODOS os alunos que têm este Personal no campo personalId
       const snapshot = await db.collection('users')
         .where('personalId', '==', user.uid)
         .where('userType', '==', 'student')
         .get();
 
-      const students = snapshot.docs.map(doc => ({
-        uid: doc.id,
-        ...doc.data()
-      }));
+      console.log('Documentos encontrados:', snapshot.docs.length);
 
-      console.log('Alunos encontrados (método 2):', students.length);
+      const students = [];
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        console.log('Aluno encontrado:', doc.id, data.name);
+        students.push({
+          uid: doc.id,
+          ...data
+        });
+      });
 
-      // Se encontrou alunos pelo método 2, atualizar a lista no Personal
+      console.log('Total de alunos:', students.length);
+
+      // Atualizar a lista de students no documento do Personal
       if (students.length > 0) {
         const studentIds = students.map(s => s.uid);
-        await db.collection('users').doc(user.uid).update({
-          students: studentIds
-        });
-        console.log('Lista de alunos atualizada no Personal');
+        try {
+          await db.collection('users').doc(user.uid).update({
+            students: studentIds
+          });
+          console.log('Lista de alunos atualizada no Personal');
+        } catch (updateError) {
+          console.error('Erro ao atualizar lista:', updateError);
+        }
       }
 
       return students;
     } catch (error) {
-      console.error('Erro ao obter alunos:', error);
+      console.error('=== ERRO AO BUSCAR ALUNOS ===');
+      console.error('Erro completo:', error);
       return [];
     }
   }
@@ -296,51 +286,10 @@ class DatabaseManager {
   }
 
   /**
-   * Obter alunos do Personal Trainer atual
-   */
-  async getPersonalStudents() {
-    try {
-      const user = authManager.getCurrentUser();
-      if (!user) throw new Error('Usuário não autenticado');
-
-      // Buscar todos os treinos do personal
-      const workouts = await this.getPersonalWorkouts();
-      
-      // Extrair IDs únicos de alunos
-      const studentIds = [...new Set(workouts
-        .filter(w => w.studentId)
-        .map(w => w.studentId))];
-
-      // Buscar dados dos alunos
-      const students = [];
-      for (const studentId of studentIds) {
-        const studentData = await this.getUserData(studentId);
-        if (studentData) {
-          students.push({
-            uid: studentId,
-            ...studentData
-          });
-        }
-      }
-
-      return students;
-    } catch (error) {
-      console.error('Erro ao obter alunos:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Obter todos os usuários do tipo aluno (para seleção)
-   * ATUALIZADO: Agora retorna apenas alunos vinculados ao Personal
+   * Obter todos os alunos vinculados (simplificado)
    */
   async getAllStudents() {
-    try {
-      return await this.getMyStudents();
-    } catch (error) {
-      console.error('Erro ao obter alunos:', error);
-      return [];
-    }
+    return await this.getMyStudents();
   }
 
   /**
