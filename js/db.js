@@ -5,6 +5,50 @@
 
 class DatabaseManager {
   /**
+   * Converter URL do YouTube para formato embed
+   */
+  convertYouTubeUrl(url) {
+    if (!url || url.trim() === '') return '';
+    
+    // Se já está no formato embed, retornar como está
+    if (url.includes('/embed/')) {
+      return url;
+    }
+    
+    // Extrair ID do vídeo de diferentes formatos de URL
+    let videoId = null;
+    
+    // Formato: youtube.com/watch?v=VIDEO_ID
+    const watchMatch = url.match(/[?&]v=([^&]+)/);
+    if (watchMatch) {
+      videoId = watchMatch[1];
+    }
+    
+    // Formato: youtu.be/VIDEO_ID
+    const shortMatch = url.match(/youtu\.be\/([^?]+)/);
+    if (shortMatch) {
+      videoId = shortMatch[1];
+    }
+    
+    // Formato: youtube.com/embed/VIDEO_ID (já tratado acima, mas por segurança)
+    const embedMatch = url.match(/\/embed\/([^?]+)/);
+    if (embedMatch) {
+      videoId = embedMatch[1];
+    }
+    
+    // Se encontrou o ID, retornar URL embed
+    if (videoId) {
+      // Remover qualquer parâmetro extra do ID
+      videoId = videoId.split('&')[0].split('?')[0];
+      return `https://www.youtube.com/embed/${videoId}`;
+    }
+    
+    // Se não conseguiu converter, retornar URL original
+    console.warn('Não foi possível converter URL do YouTube:', url);
+    return url;
+  }
+
+  /**
    * Obter dados do usuário atual
    */
   async getCurrentUserData() {
@@ -34,7 +78,7 @@ class DatabaseManager {
   }
 
   /**
-   * Obter alunos vinculados ao Personal atual (CORRIGIDO E SIMPLIFICADO)
+   * Obter alunos vinculados ao Personal atual
    */
   async getMyStudents() {
     try {
@@ -47,7 +91,6 @@ class DatabaseManager {
       console.log('=== BUSCANDO ALUNOS ===');
       console.log('Personal UID:', user.uid);
 
-      // Buscar TODOS os alunos que têm este Personal no campo personalId
       const snapshot = await db.collection('users')
         .where('personalId', '==', user.uid)
         .where('userType', '==', 'student')
@@ -67,7 +110,6 @@ class DatabaseManager {
 
       console.log('Total de alunos:', students.length);
 
-      // Atualizar a lista de students no documento do Personal
       if (students.length > 0) {
         const studentIds = students.map(s => s.uid);
         try {
@@ -89,29 +131,43 @@ class DatabaseManager {
   }
 
   /**
-   * Criar novo exercício
+   * Criar novo exercício (com conversão automática de URL)
    */
   async createExercise(name, description, videoUrl) {
     try {
       const user = authManager.getCurrentUser();
       if (!user) throw new Error('Usuário não autenticado');
 
+      console.log('=== CRIANDO EXERCÍCIO ===');
+      console.log('Nome:', name);
+      console.log('URL original:', videoUrl);
+
+      // Converter URL do YouTube automaticamente
+      const embedUrl = this.convertYouTubeUrl(videoUrl);
+      console.log('URL convertida:', embedUrl);
+
       const exerciseRef = db.collection('exercises').doc();
-      await exerciseRef.set({
+      const exerciseData = {
         id: exerciseRef.id,
         name: name,
-        description: description,
-        videoUrl: videoUrl || '',
+        description: description || '',
+        videoUrl: embedUrl,
         createdBy: user.uid,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+      };
+
+      console.log('Dados a salvar:', exerciseData);
+
+      await exerciseRef.set(exerciseData);
+      console.log('✓ Exercício criado com sucesso!');
 
       return {
         success: true,
         id: exerciseRef.id
       };
     } catch (error) {
-      console.error('Erro ao criar exercício:', error);
+      console.error('=== ERRO AO CRIAR EXERCÍCIO ===');
+      console.error('Erro completo:', error);
       return {
         success: false,
         error: error.message
@@ -120,21 +176,42 @@ class DatabaseManager {
   }
 
   /**
-   * Obter exercícios do Personal Trainer atual
+   * Obter exercícios do Personal Trainer atual (CORRIGIDO - sem orderBy)
    */
   async getPersonalExercises() {
     try {
       const user = authManager.getCurrentUser();
       if (!user) throw new Error('Usuário não autenticado');
 
+      console.log('=== BUSCANDO EXERCÍCIOS ===');
+      console.log('Personal UID:', user.uid);
+
+      // REMOVIDO orderBy para evitar erro de índice
       const snapshot = await db.collection('exercises')
         .where('createdBy', '==', user.uid)
-        .orderBy('createdAt', 'desc')
         .get();
 
-      return snapshot.docs.map(doc => doc.data());
+      console.log('Exercícios encontrados:', snapshot.docs.length);
+
+      // Ordenar manualmente por data de criação (mais recentes primeiro)
+      const exercises = snapshot.docs.map(doc => {
+        const data = doc.data();
+        console.log('Exercício:', data.name, '- ID:', data.id);
+        return data;
+      }).sort((a, b) => {
+        // Se não tem createdAt, colocar no final
+        if (!a.createdAt) return 1;
+        if (!b.createdAt) return -1;
+        // Ordenar do mais recente para o mais antigo
+        return b.createdAt.seconds - a.createdAt.seconds;
+      });
+
+      console.log('Total após ordenação:', exercises.length);
+
+      return exercises;
     } catch (error) {
-      console.error('Erro ao obter exercícios:', error);
+      console.error('=== ERRO AO OBTER EXERCÍCIOS ===');
+      console.error('Erro completo:', error);
       return [];
     }
   }
@@ -187,7 +264,6 @@ class DatabaseManager {
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      // Se treino foi associado a um aluno, adicionar ID do treino ao aluno
       if (studentId) {
         await db.collection('users').doc(studentId).update({
           assignedWorkouts: firebase.firestore.FieldValue.arrayUnion(workoutRef.id)
@@ -208,19 +284,24 @@ class DatabaseManager {
   }
 
   /**
-   * Obter treinos do Personal Trainer atual
+   * Obter treinos do Personal Trainer atual (CORRIGIDO - sem orderBy)
    */
   async getPersonalWorkouts() {
     try {
       const user = authManager.getCurrentUser();
       if (!user) throw new Error('Usuário não autenticado');
 
+      // REMOVIDO orderBy para evitar erro de índice
       const snapshot = await db.collection('workouts')
         .where('personalId', '==', user.uid)
-        .orderBy('createdAt', 'desc')
         .get();
 
-      return snapshot.docs.map(doc => doc.data());
+      // Ordenar manualmente
+      return snapshot.docs.map(doc => doc.data()).sort((a, b) => {
+        if (!a.createdAt) return 1;
+        if (!b.createdAt) return -1;
+        return b.createdAt.seconds - a.createdAt.seconds;
+      });
     } catch (error) {
       console.error('Erro ao obter treinos:', error);
       return [];
@@ -228,19 +309,24 @@ class DatabaseManager {
   }
 
   /**
-   * Obter treinos do Aluno atual
+   * Obter treinos do Aluno atual (CORRIGIDO - sem orderBy)
    */
   async getStudentWorkouts() {
     try {
       const user = authManager.getCurrentUser();
       if (!user) throw new Error('Usuário não autenticado');
 
+      // REMOVIDO orderBy para evitar erro de índice
       const snapshot = await db.collection('workouts')
         .where('studentId', '==', user.uid)
-        .orderBy('createdAt', 'desc')
         .get();
 
-      return snapshot.docs.map(doc => doc.data());
+      // Ordenar manualmente
+      return snapshot.docs.map(doc => doc.data()).sort((a, b) => {
+        if (!a.createdAt) return 1;
+        if (!b.createdAt) return -1;
+        return b.createdAt.seconds - a.createdAt.seconds;
+      });
     } catch (error) {
       console.error('Erro ao obter treinos:', error);
       return [];
@@ -267,7 +353,6 @@ class DatabaseManager {
     try {
       const workout = await this.getWorkout(workoutId);
       
-      // Se treino estava associado a um aluno, remover do aluno
       if (workout && workout.studentId) {
         await db.collection('users').doc(workout.studentId).update({
           assignedWorkouts: firebase.firestore.FieldValue.arrayRemove(workoutId)
@@ -286,7 +371,7 @@ class DatabaseManager {
   }
 
   /**
-   * Obter todos os alunos vinculados (simplificado)
+   * Obter todos os alunos vinculados
    */
   async getAllStudents() {
     return await this.getMyStudents();
@@ -309,7 +394,7 @@ class DatabaseManager {
   }
 
   /**
-   * Obter treino por ID do Firestore (para visualização do aluno)
+   * Obter treino por ID do Firestore
    */
   async getWorkoutById(workoutId) {
     try {

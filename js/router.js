@@ -25,21 +25,56 @@ class Router {
     };
 
     this.publicRoutes = ['/login', '/signup', '/'];
+    this.isReady = false;
+    this.authReady = false;
 
     // Monitorar mudanças de hash
-    window.addEventListener('hashchange', () => this.navigate(window.location.hash.slice(1)));
-    
-    // Aguardar autenticação estar pronta antes de navegar
-    this.isReady = false;
+    window.addEventListener('hashchange', () => {
+      if (this.authReady) {
+        this.navigate(window.location.hash.slice(1));
+      }
+    });
+  }
+
+  /**
+   * Aguardar autenticação estar pronta
+   */
+  async waitForAuth() {
+    return new Promise((resolve) => {
+      // Se já está pronto, resolver imediatamente
+      if (authManager.isAuthenticated() !== undefined) {
+        this.authReady = true;
+        resolve();
+        return;
+      }
+
+      // Aguardar até 3 segundos pela autenticação
+      let attempts = 0;
+      const checkAuth = setInterval(() => {
+        attempts++;
+        if (authManager.isAuthenticated() !== undefined || attempts > 30) {
+          clearInterval(checkAuth);
+          this.authReady = true;
+          resolve();
+        }
+      }, 100);
+    });
   }
 
   /**
    * Navegar para uma rota
    */
-  navigate(path = '/') {
+  async navigate(path = '/') {
+    console.log('=== NAVEGANDO PARA:', path, '===');
+
     // Garantir que o caminho comece com /
     if (!path.startsWith('/')) {
       path = '/' + path;
+    }
+
+    // Aguardar autenticação estar pronta
+    if (!this.authReady) {
+      await this.waitForAuth();
     }
 
     // Verificar se é uma rota protegida
@@ -47,13 +82,13 @@ class Router {
       const requiredType = this.protectedRoutes[path];
       
       if (!authManager.isAuthenticated()) {
-        // Usuário não autenticado, redirecionar para login
+        console.log('Usuário não autenticado, redirecionando para login');
         window.location.hash = '#/login';
         return;
       }
 
       if (authManager.getCurrentUserType() !== requiredType) {
-        // Usuário autenticado mas tipo incorreto
+        console.log('Tipo incorreto, redirecionando');
         const redirectPath = authManager.isPersonal() 
           ? '/personal/dashboard' 
           : '/student/dashboard';
@@ -64,6 +99,7 @@ class Router {
 
     // Rota pública - se usuário está autenticado, redirecionar para dashboard
     if (this.publicRoutes.includes(path) && authManager.isAuthenticated()) {
+      console.log('Usuário já autenticado, redirecionando para dashboard');
       const redirectPath = authManager.isPersonal() 
         ? '/personal/dashboard' 
         : '/student/dashboard';
@@ -72,7 +108,7 @@ class Router {
     }
 
     // Carregar página
-    this.loadPage(path);
+    await this.loadPage(path);
   }
 
   /**
@@ -82,12 +118,13 @@ class Router {
     const pagePath = this.routes[path];
     
     if (!pagePath) {
-      // Rota não encontrada
+      console.log('Rota não encontrada:', path);
       this.loadPage('/login');
       return;
     }
 
     try {
+      console.log('Carregando página:', pagePath);
       const response = await fetch(pagePath);
       if (!response.ok) {
         throw new Error('Página não encontrada');
@@ -98,16 +135,27 @@ class Router {
       
       if (container) {
         container.innerHTML = html;
+        console.log('✓ HTML carregado');
+        
+        // Aguardar um momento para o DOM atualizar
+        await new Promise(resolve => setTimeout(resolve, 50));
         
         // Executar scripts da página se existirem
         const scripts = container.querySelectorAll('script');
-        scripts.forEach(script => {
+        console.log('Scripts encontrados:', scripts.length);
+        
+        for (const script of scripts) {
           const newScript = document.createElement('script');
           newScript.textContent = script.textContent;
           document.body.appendChild(newScript);
-          // Remover script após execução para evitar duplicação
-          setTimeout(() => document.body.removeChild(newScript), 100);
-        });
+          console.log('✓ Script executado');
+          
+          // Remover script após execução
+          await new Promise(resolve => setTimeout(resolve, 10));
+          document.body.removeChild(newScript);
+        }
+
+        console.log('✓ Página totalmente carregada');
       }
 
       // Atualizar URL
@@ -178,13 +226,17 @@ class Router {
   /**
    * Inicializar router
    */
-  init() {
-    // Aguardar um momento para autenticação estar pronta
-    setTimeout(() => {
-      this.isReady = true;
-      const initialPath = window.location.hash.slice(1) || '/';
-      this.navigate(initialPath);
-    }, 500);
+  async init() {
+    console.log('=== INICIALIZANDO ROUTER ===');
+    
+    // Aguardar autenticação estar pronta
+    await this.waitForAuth();
+    
+    this.isReady = true;
+    const initialPath = window.location.hash.slice(1) || '/';
+    console.log('Caminho inicial:', initialPath);
+    
+    await this.navigate(initialPath);
   }
 }
 
@@ -196,5 +248,6 @@ window.router = router;
 
 // Inicializar roteamento quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM pronto, inicializando router...');
   router.init();
 });

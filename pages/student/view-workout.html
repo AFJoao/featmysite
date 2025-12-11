@@ -7,23 +7,47 @@
     </nav>
   </header>
 
-  <div style="max-width: 900px; margin: 30px auto;">
-    <div id="workoutContainer">
-      <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
-    </div>
+  <!-- Loading inicial -->
+  <div id="pageLoading" style="text-align: center; padding: 50px;">
+    <div class="spinner" style="margin: 0 auto;"></div>
+    <p>Carregando treino...</p>
+  </div>
+
+  <!-- Conteúdo -->
+  <div id="mainContent" style="display: none; max-width: 900px; margin: 30px auto;">
+    <div id="workoutContainer"></div>
   </div>
 </div>
 
 <script>
-  // Logout
-  document.getElementById('logoutBtn').addEventListener('click', async (e) => {
-    e.preventDefault();
-    await authManager.logout();
-    router.goToLogin();
+(async function() {
+  console.log('=== VISUALIZAR TREINO - INICIANDO ===');
+
+  // Aguardar DOM
+  await new Promise(resolve => {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', resolve);
+    } else {
+      resolve();
+    }
   });
 
-  // Mapeamento de nomes dos dias
-  const dayNames = {
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  console.log('✓ DOM pronto');
+
+  // Logout
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await authManager.logout();
+      router.goToLogin();
+    });
+  }
+
+  // Mapeamento de dias
+  const daysMap = {
     monday: 'Segunda-feira',
     tuesday: 'Terça-feira',
     wednesday: 'Quarta-feira',
@@ -33,7 +57,23 @@
     sunday: 'Domingo'
   };
 
-  const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  const daysOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+  // Função para trocar de dia
+  window.switchDayFunc = function(day) {
+    console.log('Trocando para dia:', day);
+    
+    // Remover active de todos
+    document.querySelectorAll('.day-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.day-content').forEach(content => content.classList.remove('active'));
+
+    // Adicionar active ao selecionado
+    const targetBtn = document.querySelector(`.day-btn[data-day="${day}"]`);
+    const targetContent = document.querySelector(`.day-content[data-day="${day}"]`);
+    
+    if (targetBtn) targetBtn.classList.add('active');
+    if (targetContent) targetContent.classList.add('active');
+  };
 
   // Carregar treino
   async function loadWorkout() {
@@ -41,15 +81,21 @@
     const container = document.getElementById('workoutContainer');
     
     if (!workoutId) {
-      container.innerHTML = '<p>Treino não encontrado.</p>';
+      container.innerHTML = '<p>❌ Treino não encontrado.</p>';
+      document.getElementById('pageLoading').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'block';
       return;
     }
 
     try {
+      console.log('Carregando treino:', workoutId);
       const workout = await dbManager.getWorkoutById(workoutId);
+      console.log('Treino carregado:', workout);
       
       if (!workout) {
-        container.innerHTML = '<p>Treino não encontrado.</p>';
+        container.innerHTML = '<p>❌ Treino não encontrado.</p>';
+        document.getElementById('pageLoading').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
         return;
       }
 
@@ -59,26 +105,33 @@
       html += '<p>' + workout.description + '</p>';
       html += '</div>';
 
-      // Criar navegação de dias
-      const daysWithExercises = dayOrder.filter(day => workout.days[day] && workout.days[day].length > 0);
+      // Filtrar dias com exercícios
+      const daysWithExercises = daysOrder.filter(day => 
+        workout.days && workout.days[day] && workout.days[day].length > 0
+      );
       
+      console.log('Dias com exercícios:', daysWithExercises);
+
       if (daysWithExercises.length === 0) {
         html += '<p>Este treino não possui exercícios.</p>';
       } else {
+        // Navegação de dias
         html += '<div class="days-navigation">';
         daysWithExercises.forEach((day, index) => {
-          html += '<button class="day-btn' + (index === 0 ? ' active' : '') + '" onclick="switchDay(\'' + day + '\')">' + dayNames[day] + '</button>';
+          html += `<button class="day-btn${index === 0 ? ' active' : ''}" data-day="${day}" onclick="switchDayFunc('${day}')">${daysMap[day]}</button>`;
         });
         html += '</div>';
 
-        // Renderizar conteúdo de cada dia
+        // Conteúdo de cada dia
         for (let i = 0; i < daysWithExercises.length; i++) {
           const day = daysWithExercises[i];
-          html += '<div class="day-content' + (i === 0 ? ' active' : '') + '" data-day="' + day + '">';
-          html += '<h3>' + dayNames[day] + '</h3>';
+          const exercises = workout.days[day];
+          
+          html += `<div class="day-content${i === 0 ? ' active' : ''}" data-day="${day}">`;
+          html += '<h3>' + daysMap[day] + '</h3>';
           html += '<div class="exercises-for-day">';
 
-          for (const exercise of workout.days[day]) {
+          for (const exercise of exercises) {
             html += '<div class="exercise-card">';
             html += '<h4>' + exercise.exerciseName + '</h4>';
             
@@ -87,17 +140,19 @@
             html += '<strong>Repetições:</strong> ' + exercise.reps;
             html += '</div>';
 
-            if (exercise.notes) {
+            if (exercise.notes && exercise.notes.trim() !== '') {
               html += '<div class="notes">';
               html += '<strong>Observações:</strong> ' + exercise.notes;
               html += '</div>';
             }
 
-            // Adicionar vídeo se disponível
+            // Vídeo
             if (exercise.videoUrl && exercise.videoUrl.trim() !== '') {
               html += '<div class="video-container">';
               html += '<iframe src="' + exercise.videoUrl + '" allowfullscreen></iframe>';
               html += '</div>';
+            } else {
+              html += '<p style="color: #999; font-size: 12px; margin-top: 10px;">📹 Sem vídeo disponível</p>';
             }
 
             html += '</div>';
@@ -109,31 +164,29 @@
       }
 
       container.innerHTML = html;
+      console.log('✓ Treino renderizado');
+
+      // Mostrar conteúdo
+      document.getElementById('pageLoading').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'block';
+
+      console.log('=== VISUALIZAÇÃO COMPLETA ===');
     } catch (error) {
-      console.error('Erro ao carregar treino:', error);
-      container.innerHTML = '<p>Erro ao carregar treino.</p>';
+      console.error('❌ Erro ao carregar treino:', error);
+      container.innerHTML = `
+        <div class="card" style="border-color: #cc0000;">
+          <p style="color: #cc0000;">
+            <strong>❌ Erro ao carregar treino.</strong><br>
+            ${error.message}
+          </p>
+        </div>
+      `;
+      document.getElementById('pageLoading').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'block';
     }
   }
 
-  // Trocar dia
-  function switchDay(day) {
-    // Remover classe active de todos os botões e conteúdos
-    document.querySelectorAll('.day-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.day-content').forEach(content => content.classList.remove('active'));
-
-    // Adicionar classe active ao botão e conteúdo selecionado
-    document.querySelectorAll('.day-btn').forEach(btn => {
-      if (btn.textContent.toLowerCase().includes(dayNames[day].split('-')[0])) {
-        btn.classList.add('active');
-      }
-    });
-
-    const targetContent = document.querySelector('[data-day="' + day + '"]');
-    if (targetContent) {
-      targetContent.classList.add('active');
-    }
-  }
-
-  // Carregar treino quando página for carregada
-  loadWorkout();
+  // Carregar treino
+  await loadWorkout();
+})();
 </script>

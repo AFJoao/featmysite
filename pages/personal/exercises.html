@@ -19,26 +19,34 @@
 
       <div class="form-group">
         <label for="exerciseName">Nome do Exercício:</label>
-        <input type="text" id="exerciseName" placeholder="Ex: Supino" required>
+        <input type="text" id="exerciseName" placeholder="Ex: Supino Reto" required>
       </div>
 
       <div class="form-group">
         <label for="exerciseDescription">Descrição:</label>
-        <textarea id="exerciseDescription" placeholder="Descreva o exercício..."></textarea>
+        <textarea id="exerciseDescription" placeholder="Descreva o exercício, músculos trabalhados, etc."></textarea>
       </div>
 
       <div class="form-group">
-        <label for="exerciseVideo">URL do Vídeo (YouTube Embed):</label>
-        <input type="text" id="exerciseVideo" placeholder="Ex: https://www.youtube.com/embed/dQw4w9WgXcQ">
+        <label for="exerciseVideo">URL do Vídeo (YouTube):</label>
+        <input type="text" id="exerciseVideo" placeholder="Ex: https://www.youtube.com/watch?v=dQw4w9WgXcQ">
         <small style="display: block; margin-top: 5px; color: #666;">
-          Use o formato embed: youtube.com/embed/VIDEO_ID
+          ✓ Cole o link normal do YouTube (watch?v= ou youtu.be/)<br>
+          ✓ O sistema converterá automaticamente para o formato correto
         </small>
+        <div id="videoPreview" style="margin-top: 10px; display: none;">
+          <div style="border: 2px solid #000; padding: 10px; background: #f5f5f5;">
+            <strong>✓ Prévia do vídeo:</strong>
+            <div id="videoPreviewFrame" style="margin-top: 10px; position: relative; width: 100%; padding-bottom: 56.25%; height: 0; overflow: hidden;">
+            </div>
+          </div>
+        </div>
       </div>
 
-      <button onclick="createExercise()" type="button">Criar Exercício</button>
+      <button id="createExerciseBtn" type="button">Criar Exercício</button>
     </div>
 
-    <h3>Lista de Exercícios</h3>
+    <h3>Lista de Exercícios (<span id="exercisesCount">0</span>)</h3>
     <div id="exercisesList" class="exercises-list">
       <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
     </div>
@@ -46,6 +54,22 @@
 </div>
 
 <script>
+(async function() {
+  console.log('=== PÁGINA DE EXERCÍCIOS - INICIANDO ===');
+
+  // Aguardar DOM
+  await new Promise(resolve => {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', resolve);
+    } else {
+      resolve();
+    }
+  });
+
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  console.log('✓ DOM pronto');
+
   // Logout
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
@@ -56,95 +80,201 @@
     });
   }
 
-  // Criar exercício
-  async function createExercise() {
-    const name = document.getElementById('exerciseName').value;
-    const description = document.getElementById('exerciseDescription').value;
-    const videoUrl = document.getElementById('exerciseVideo').value;
-    const errorDiv = document.getElementById('createError');
-    const successDiv = document.getElementById('createSuccess');
+  // Prévia do vídeo
+  const videoInput = document.getElementById('exerciseVideo');
+  const videoPreview = document.getElementById('videoPreview');
+  const videoPreviewFrame = document.getElementById('videoPreviewFrame');
 
-    errorDiv.style.display = 'none';
-    successDiv.style.display = 'none';
-
-    if (!name) {
-      errorDiv.textContent = 'Nome do exercício é obrigatório';
-      errorDiv.style.display = 'block';
-      return;
-    }
-
-    try {
-      const result = await dbManager.createExercise(name, description, videoUrl);
-
-      if (result.success) {
-        successDiv.textContent = 'Exercício criado com sucesso!';
-        successDiv.style.display = 'block';
-        
-        document.getElementById('exerciseName').value = '';
-        document.getElementById('exerciseDescription').value = '';
-        document.getElementById('exerciseVideo').value = '';
-
-        setTimeout(() => {
-          successDiv.style.display = 'none';
-          loadExercises();
-        }, 2000);
-      } else {
-        errorDiv.textContent = result.error;
-        errorDiv.style.display = 'block';
+  if (videoInput) {
+    videoInput.addEventListener('input', (e) => {
+      const url = e.target.value.trim();
+      
+      if (url === '') {
+        videoPreview.style.display = 'none';
+        return;
       }
-    } catch (error) {
-      console.error('Erro ao criar exercício:', error);
-      errorDiv.textContent = 'Erro ao criar exercício. Tente novamente.';
-      errorDiv.style.display = 'block';
-    }
+
+      const embedUrl = dbManager.convertYouTubeUrl(url);
+      
+      if (embedUrl && embedUrl.includes('/embed/')) {
+        videoPreview.style.display = 'block';
+        videoPreviewFrame.innerHTML = `
+          <iframe 
+            src="${embedUrl}" 
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;"
+            allowfullscreen>
+          </iframe>
+        `;
+      } else {
+        videoPreview.style.display = 'none';
+      }
+    });
+  }
+
+  // Criar exercício
+  const createExerciseBtn = document.getElementById('createExerciseBtn');
+  if (createExerciseBtn) {
+    createExerciseBtn.addEventListener('click', async () => {
+      console.log('=== CRIAR EXERCÍCIO ===');
+      
+      const name = document.getElementById('exerciseName')?.value.trim();
+      const description = document.getElementById('exerciseDescription')?.value.trim();
+      const videoUrl = document.getElementById('exerciseVideo')?.value.trim();
+      const errorDiv = document.getElementById('createError');
+      const successDiv = document.getElementById('createSuccess');
+
+      if (!errorDiv || !successDiv) return;
+
+      errorDiv.style.display = 'none';
+      successDiv.style.display = 'none';
+
+      if (!name) {
+        errorDiv.textContent = '❌ Nome do exercício é obrigatório';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      createExerciseBtn.textContent = '⏳ Criando...';
+      createExerciseBtn.disabled = true;
+
+      try {
+        const result = await dbManager.createExercise(name, description || '', videoUrl || '');
+        console.log('Resultado:', result);
+
+        if (result.success) {
+          successDiv.innerHTML = '✓ <strong>Exercício criado!</strong><br><small>Atualizando lista...</small>';
+          successDiv.style.display = 'block';
+          
+          document.getElementById('exerciseName').value = '';
+          document.getElementById('exerciseDescription').value = '';
+          document.getElementById('exerciseVideo').value = '';
+          videoPreview.style.display = 'none';
+
+          setTimeout(async () => {
+            successDiv.style.display = 'none';
+            await loadExercises();
+            createExerciseBtn.textContent = 'Criar Exercício';
+            createExerciseBtn.disabled = false;
+          }, 1500);
+        } else {
+          errorDiv.textContent = '❌ ' + result.error;
+          errorDiv.style.display = 'block';
+          createExerciseBtn.textContent = 'Criar Exercício';
+          createExerciseBtn.disabled = false;
+        }
+      } catch (error) {
+        console.error('Erro:', error);
+        errorDiv.textContent = '❌ Erro: ' + error.message;
+        errorDiv.style.display = 'block';
+        createExerciseBtn.textContent = 'Criar Exercício';
+        createExerciseBtn.disabled = false;
+      }
+    });
   }
 
   // Carregar exercícios
   async function loadExercises() {
     try {
-      const exercises = await dbManager.getPersonalExercises();
+      console.log('=== CARREGANDO EXERCÍCIOS ===');
+      
       const exercisesList = document.getElementById('exercisesList');
+      const exercisesCount = document.getElementById('exercisesCount');
+
+      if (!exercisesList || !exercisesCount) return;
+
+      const exercises = await dbManager.getPersonalExercises();
+      console.log('Exercícios retornados:', exercises.length);
+
+      exercisesCount.textContent = exercises.length;
 
       if (exercises.length === 0) {
-        exercisesList.innerHTML = '<p>Nenhum exercício criado ainda.</p>';
-      } else {
-        exercisesList.innerHTML = exercises.map(exercise => `
-          <div class="exercise-item">
-            <div class="exercise-info">
-              <h4>${exercise.name}</h4>
-              <p>${exercise.description}</p>
-              ${exercise.videoUrl ? `<p><small>Vídeo: <a href="${exercise.videoUrl}" target="_blank">Ver</a></small></p>` : ''}
-            </div>
-            <div class="exercise-actions">
-              <button onclick="deleteExercise('${exercise.id}')" class="danger">Deletar</button>
-            </div>
+        exercisesList.innerHTML = `
+          <div class="card" style="background-color: #f5f5f5;">
+            <p style="margin: 0; color: #666;">
+              Nenhum exercício criado ainda.<br>
+              Crie seu primeiro exercício usando o formulário acima.
+            </p>
           </div>
-        `).join('');
+        `;
+      } else {
+        exercisesList.innerHTML = exercises.map(exercise => {
+          const hasVideo = exercise.videoUrl && exercise.videoUrl.trim() !== '';
+          
+          return `
+            <div class="exercise-item" style="flex-direction: column; align-items: flex-start;">
+              <div style="width: 100%;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                  <div style="flex: 1;">
+                    <h4 style="margin: 0 0 5px 0;">${exercise.name}</h4>
+                    <p style="margin: 0; font-size: 14px; color: #666;">${exercise.description || 'Sem descrição'}</p>
+                  </div>
+                  <button 
+                    data-exercise-id="${exercise.id}" 
+                    class="delete-exercise-btn danger" 
+                    style="padding: 8px 12px; font-size: 12px;">
+                    🗑️ Deletar
+                  </button>
+                </div>
+                
+                ${hasVideo ? `
+                  <div style="margin-top: 10px; position: relative; width: 100%; padding-bottom: 56.25%; height: 0; overflow: hidden; border: 2px solid #000;">
+                    <iframe 
+                      src="${exercise.videoUrl}" 
+                      style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;"
+                      allowfullscreen>
+                    </iframe>
+                  </div>
+                ` : `
+                  <p style="margin: 10px 0 0 0; font-size: 12px; color: #999;">📹 Sem vídeo</p>
+                `}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Event listeners para deletar
+        document.querySelectorAll('.delete-exercise-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const exerciseId = btn.getAttribute('data-exercise-id');
+            
+            if (confirm('⚠️ Tem certeza que deseja deletar este exercício?\n\nEsta ação não pode ser desfeita.')) {
+              try {
+                const result = await dbManager.deleteExercise(exerciseId);
+                if (result.success) {
+                  alert('✓ Exercício deletado!');
+                  loadExercises();
+                } else {
+                  alert('❌ Erro: ' + result.error);
+                }
+              } catch (error) {
+                console.error('Erro:', error);
+                alert('❌ Erro ao deletar.');
+              }
+            }
+          });
+        });
       }
+
+      console.log('✓ Exercícios carregados');
     } catch (error) {
-      console.error('Erro ao carregar exercícios:', error);
-      document.getElementById('exercisesList').innerHTML = '<p>Erro ao carregar exercícios.</p>';
-    }
-  }
-
-  // Deletar exercício
-  async function deleteExercise(exerciseId) {
-    if (confirm('Tem certeza que deseja deletar este exercício?')) {
-      try {
-        const result = await dbManager.deleteExercise(exerciseId);
-        if (result.success) {
-          alert('Exercício deletado com sucesso!');
-          loadExercises();
-        } else {
-          alert('Erro ao deletar exercício: ' + result.error);
-        }
-      } catch (error) {
-        console.error('Erro ao deletar exercício:', error);
-        alert('Erro ao deletar exercício. Tente novamente.');
+      console.error('❌ Erro ao carregar exercícios:', error);
+      const exercisesList = document.getElementById('exercisesList');
+      if (exercisesList) {
+        exercisesList.innerHTML = `
+          <div class="card" style="border-color: #cc0000;">
+            <p style="color: #cc0000;">
+              <strong>❌ Erro ao carregar exercícios.</strong><br>
+              ${error.message}
+            </p>
+          </div>
+        `;
       }
     }
   }
 
-  // Carregar exercícios quando página for carregada
-  loadExercises();
+  // Carregar lista
+  await loadExercises();
+
+  console.log('=== PÁGINA DE EXERCÍCIOS CARREGADA ===');
+})();
 </script>

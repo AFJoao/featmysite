@@ -7,81 +7,148 @@
   </header>
 
   <div style="max-width: 1000px; margin: 30px auto;">
-    <h2>Bem-vindo, <span id="studentName">...</span>!</h2>
+    <h2>Bem-vindo, <span id="studentName">Carregando...</span>!</h2>
     
     <h3 style="margin-top: 30px; margin-bottom: 15px;">Treinos Atribuídos</h3>
     <div id="workoutsList" class="workouts-list">
-      <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
+      <div class="loading"><div class="spinner"></div><p>Carregando treinos...</p></div>
     </div>
   </div>
 </div>
 
 <script>
+(async function() {
+  console.log('=== DASHBOARD DO ALUNO - INICIANDO ===');
+
+  // Aguardar DOM
+  await new Promise(resolve => {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', resolve);
+    } else {
+      resolve();
+    }
+  });
+
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  console.log('✓ DOM pronto');
+
   // Logout
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async (e) => {
       e.preventDefault();
+      console.log('Fazendo logout...');
       await authManager.logout();
       router.goToLogin();
     });
   }
 
+  // Mapeamento de dias
+  const daysMap = {
+    monday: 'Segunda',
+    tuesday: 'Terça',
+    wednesday: 'Quarta',
+    thursday: 'Quinta',
+    friday: 'Sexta',
+    saturday: 'Sábado',
+    sunday: 'Domingo'
+  };
+
+  // Função para visualizar treino
+  window.viewWorkoutFunc = function(workoutId) {
+    console.log('Visualizando treino:', workoutId);
+    sessionStorage.setItem('viewWorkoutId', workoutId);
+    router.goToViewWorkout();
+  };
+
   // Carregar dados do Aluno
-  async function loadStudentDashboard() {
+  async function loadStudentData() {
     try {
+      console.log('Carregando dados do aluno...');
+      
+      const studentNameSpan = document.getElementById('studentName');
+      if (!studentNameSpan) return;
+
       const userData = await dbManager.getCurrentUserData();
+      console.log('Dados do aluno:', userData);
       
       if (userData) {
-        document.getElementById('studentName').textContent = userData.name;
+        studentNameSpan.textContent = userData.name || 'Aluno';
       }
 
-      // Carregar treinos
-      const workouts = await dbManager.getStudentWorkouts();
+      console.log('✓ Dados do aluno carregados');
+    } catch (error) {
+      console.error('❌ Erro ao carregar dados:', error);
+    }
+  }
+
+  // Carregar treinos
+  async function loadWorkouts() {
+    try {
+      console.log('=== CARREGANDO TREINOS DO ALUNO ===');
+      
       const workoutsList = document.getElementById('workoutsList');
+      if (!workoutsList) return;
+
+      const workouts = await dbManager.getStudentWorkouts();
+      console.log('Treinos retornados:', workouts);
 
       if (workouts.length === 0) {
-        workoutsList.innerHTML = '<p>Nenhum treino atribuído ainda. Aguarde seu Personal Trainer atribuir um treino.</p>';
+        workoutsList.innerHTML = `
+          <div class="card" style="background-color: #f5f5f5;">
+            <p style="margin: 0; color: #666;">
+              Nenhum treino atribuído ainda.<br>
+              Aguarde seu Personal Trainer atribuir um treino a você.
+            </p>
+          </div>
+        `;
       } else {
-        const dayNames = {
-          monday: 'Segunda',
-          tuesday: 'Terça',
-          wednesday: 'Quarta',
-          thursday: 'Quinta',
-          friday: 'Sexta',
-          saturday: 'Sábado',
-          sunday: 'Domingo'
-        };
-
         workoutsList.innerHTML = workouts.map(workout => {
+          // Contar dias com exercícios
           const daysWithExercises = Object.keys(workout.days || {}).filter(day => {
             return workout.days[day] && workout.days[day].length > 0;
-          }).map(day => dayNames[day] || day);
+          }).map(day => daysMap[day] || day);
 
           return `
             <div class="card">
               <h4>${workout.name}</h4>
-              <p>${workout.description}</p>
+              <p>${workout.description || 'Sem descrição'}</p>
               <p><strong>Dias:</strong> ${daysWithExercises.length > 0 ? daysWithExercises.join(', ') : 'Nenhum dia definido'}</p>
               <div style="margin-top: 10px;">
-                <button onclick="viewWorkout('${workout.id}')" class="secondary">Ver Treino</button>
+                <button 
+                  class="view-workout-btn secondary" 
+                  data-workout-id="${workout.id}"
+                  onclick="viewWorkoutFunc('${workout.id}')">
+                  👁️ Ver Treino
+                </button>
               </div>
             </div>
           `;
         }).join('');
       }
+
+      console.log('✓ Treinos carregados');
     } catch (error) {
-      console.error('Erro ao carregar dashboard:', error);
-      document.getElementById('workoutsList').innerHTML = '<p>Erro ao carregar treinos.</p>';
+      console.error('❌ Erro ao carregar treinos:', error);
+      const workoutsList = document.getElementById('workoutsList');
+      if (workoutsList) {
+        workoutsList.innerHTML = `
+          <div class="card" style="border-color: #cc0000;">
+            <p style="color: #cc0000;">
+              <strong>❌ Erro ao carregar treinos.</strong><br>
+              ${error.message}
+            </p>
+          </div>
+        `;
+      }
     }
   }
 
-  // Ver treino
-  function viewWorkout(workoutId) {
-    sessionStorage.setItem('viewWorkoutId', workoutId);
-    router.goToViewWorkout();
-  }
+  // Carregar tudo
+  await loadStudentData();
+  await loadWorkouts();
 
-  // Carregar dashboard quando página for carregada
-  loadStudentDashboard();
+  console.log('=== DASHBOARD DO ALUNO CARREGADO ===');
+})();
 </script>

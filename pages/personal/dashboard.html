@@ -9,14 +9,14 @@
   </header>
 
   <div style="max-width: 1000px; margin: 30px auto;">
-    <h2>Bem-vindo, <span id="personalName">...</span>!</h2>
+    <h2>Bem-vindo, <span id="personalName">Carregando...</span>!</h2>
     
     <!-- Card com Código de Referência -->
     <div class="card" style="background-color: #000000; color: #ffffff; margin: 20px 0;">
       <h3 style="margin-bottom: 10px;">Seu Código de Referência</h3>
       <p style="font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 15px 0;" id="referralCode">------</p>
       <p style="margin-top: 10px; font-size: 14px;">Compartilhe este código com seus alunos para que eles possam se vincular a você no cadastro.</p>
-      <button onclick="copyReferralCode()" class="secondary" style="margin-top: 15px; background-color: #ffffff; color: #000000;">
+      <button id="copyCodeBtn" class="secondary" style="margin-top: 15px; background-color: #ffffff; color: #000000;">
         📋 Copiar Código
       </button>
     </div>
@@ -24,91 +24,146 @@
     <!-- Meus Alunos -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px; margin-bottom: 15px;">
       <h3 style="margin: 0;">Meus Alunos (<span id="studentsCount">0</span>)</h3>
-      <button onclick="loadStudents()" class="secondary" style="padding: 8px 15px; font-size: 12px;">
+      <button id="reloadStudentsBtn" class="secondary" style="padding: 8px 15px; font-size: 12px;">
         🔄 Atualizar Lista
       </button>
     </div>
     <div id="studentsList" class="students-list">
-      <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
+      <div class="loading"><div class="spinner"></div><p>Carregando alunos...</p></div>
     </div>
 
     <!-- Meus Treinos -->
     <h3 style="margin-top: 30px; margin-bottom: 15px;">Meus Treinos</h3>
     <div id="workoutsList" class="workouts-list">
-      <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
+      <div class="loading"><div class="spinner"></div><p>Carregando treinos...</p></div>
     </div>
   </div>
 </div>
 
 <script>
+(async function() {
+  console.log('=== DASHBOARD DO PERSONAL - INICIANDO ===');
+
   let currentReferralCode = '';
+  let isLoading = false;
+
+  // Aguardar DOM estar pronto
+  await new Promise(resolve => {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', resolve);
+    } else {
+      resolve();
+    }
+  });
+
+  console.log('✓ DOM pronto');
+
+  // Aguardar elementos estarem no DOM
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  // Verificar se elementos existem
+  const logoutBtn = document.getElementById('logoutBtn');
+  const copyCodeBtn = document.getElementById('copyCodeBtn');
+  const reloadStudentsBtn = document.getElementById('reloadStudentsBtn');
+
+  if (!logoutBtn) {
+    console.error('❌ Botão logout não encontrado!');
+    return;
+  }
+
+  console.log('✓ Elementos encontrados');
 
   // Logout
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      await authManager.logout();
-      router.goToLogin();
+  logoutBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    console.log('Fazendo logout...');
+    await authManager.logout();
+    router.goToLogin();
+  });
+
+  // Copiar código de referência
+  if (copyCodeBtn) {
+    copyCodeBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(currentReferralCode).then(() => {
+        alert('✓ Código copiado!\n\nCompartilhe este código com seus alunos para que eles possam se vincular a você no cadastro.');
+      }).catch(err => {
+        const textarea = document.createElement('textarea');
+        textarea.value = currentReferralCode;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert('✓ Código copiado!');
+      });
     });
   }
 
-  // Copiar código de referência
-  function copyReferralCode() {
-    navigator.clipboard.writeText(currentReferralCode).then(() => {
-      alert('✓ Código copiado!\n\nCompartilhe este código com seus alunos para que eles possam se vincular a você no cadastro.');
-    }).catch(err => {
-      // Fallback para navegadores mais antigos
-      const textarea = document.createElement('textarea');
-      textarea.value = currentReferralCode;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      alert('✓ Código copiado!\n\nCompartilhe este código com seus alunos para que eles possam se vincular a você no cadastro.');
+  // Recarregar alunos
+  if (reloadStudentsBtn) {
+    reloadStudentsBtn.addEventListener('click', () => {
+      console.log('Recarregando alunos...');
+      loadStudents();
     });
   }
 
   // Carregar dados do Personal
-  async function loadPersonalDashboard() {
+  async function loadPersonalData() {
     try {
-      console.log('=== CARREGANDO DASHBOARD DO PERSONAL ===');
+      console.log('=== CARREGANDO DADOS DO PERSONAL ===');
+      
+      const personalNameSpan = document.getElementById('personalName');
+      const referralCodeP = document.getElementById('referralCode');
+
+      if (!personalNameSpan || !referralCodeP) {
+        console.error('❌ Elementos não encontrados');
+        return;
+      }
+
       const userData = await dbManager.getCurrentUserData();
       console.log('Dados do usuário:', userData);
       
       if (userData) {
-        document.getElementById('personalName').textContent = userData.name;
+        personalNameSpan.textContent = userData.name || 'Personal';
         
-        // Mostrar código de referência
         if (userData.referralCode) {
           currentReferralCode = userData.referralCode;
-          document.getElementById('referralCode').textContent = userData.referralCode;
-          console.log('Código de referência:', userData.referralCode);
+          referralCodeP.textContent = userData.referralCode;
+          console.log('✓ Código de referência:', userData.referralCode);
         } else {
-          console.warn('Personal não tem código de referência!');
+          console.warn('⚠️ Personal não tem código de referência!');
+          referralCodeP.textContent = 'ERRO';
         }
+      } else {
+        console.error('❌ Dados do usuário não encontrados');
       }
 
-      // Carregar alunos vinculados
-      await loadStudents();
-
-      // Carregar treinos
-      await loadWorkouts();
+      console.log('✓ Dados do personal carregados');
     } catch (error) {
-      console.error('Erro ao carregar dashboard:', error);
+      console.error('❌ Erro ao carregar dados do personal:', error);
     }
   }
 
   // Carregar alunos
   async function loadStudents() {
+    if (isLoading) {
+      console.log('Já está carregando, aguarde...');
+      return;
+    }
+
     try {
+      isLoading = true;
       console.log('=== CARREGANDO LISTA DE ALUNOS ===');
+      
       const studentsList = document.getElementById('studentsList');
       const studentsCount = document.getElementById('studentsCount');
 
-      // Mostrar loading
+      if (!studentsList || !studentsCount) {
+        console.error('❌ Elementos da lista não encontrados');
+        return;
+      }
+
       studentsList.innerHTML = '<div class="loading"><div class="spinner"></div><p>Carregando alunos...</p></div>';
 
       const students = await dbManager.getMyStudents();
@@ -136,25 +191,41 @@
           </div>
         `).join('');
       }
+
+      console.log('✓ Lista de alunos atualizada');
     } catch (error) {
       console.error('=== ERRO AO CARREGAR ALUNOS ===');
       console.error('Erro completo:', error);
-      document.getElementById('studentsList').innerHTML = `
-        <div class="card" style="border-color: #cc0000;">
-          <p style="color: #cc0000;">
-            <strong>Erro ao carregar alunos.</strong><br>
-            ${error.message}
-          </p>
-        </div>
-      `;
+      
+      const studentsList = document.getElementById('studentsList');
+      if (studentsList) {
+        studentsList.innerHTML = `
+          <div class="card" style="border-color: #cc0000;">
+            <p style="color: #cc0000;">
+              <strong>Erro ao carregar alunos.</strong><br>
+              ${error.message}
+            </p>
+          </div>
+        `;
+      }
+    } finally {
+      isLoading = false;
     }
   }
 
   // Carregar treinos
   async function loadWorkouts() {
     try {
-      const workouts = await dbManager.getPersonalWorkouts();
+      console.log('=== CARREGANDO TREINOS ===');
+      
       const workoutsList = document.getElementById('workoutsList');
+      if (!workoutsList) {
+        console.error('❌ Elemento workoutsList não encontrado');
+        return;
+      }
+
+      const workouts = await dbManager.getPersonalWorkouts();
+      console.log('Treinos retornados:', workouts);
 
       if (workouts.length === 0) {
         workoutsList.innerHTML = '<p>Nenhum treino criado ainda. <a href="#/personal/create-workout">Criar novo treino</a></p>';
@@ -182,33 +253,55 @@
               <p><strong>Dias:</strong> ${daysCount} dia(s)</p>
               <p><strong>Aluno:</strong> ${studentName}</p>
               <div style="margin-top: 10px;">
-                <button onclick="deleteWorkout('${workout.id}')" class="danger">Deletar</button>
+                <button class="delete-workout-btn danger" data-workout-id="${workout.id}">Deletar</button>
               </div>
             </div>
           `;
         }).join('');
+
+        // Adicionar event listeners aos botões de deletar
+        document.querySelectorAll('.delete-workout-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const workoutId = btn.getAttribute('data-workout-id');
+            await deleteWorkout(workoutId);
+          });
+        });
       }
+
+      console.log('✓ Treinos carregados');
     } catch (error) {
-      console.error('Erro ao carregar treinos:', error);
-      document.getElementById('workoutsList').innerHTML = '<p>Erro ao carregar treinos.</p>';
+      console.error('❌ Erro ao carregar treinos:', error);
+      const workoutsList = document.getElementById('workoutsList');
+      if (workoutsList) {
+        workoutsList.innerHTML = '<p>Erro ao carregar treinos.</p>';
+      }
     }
   }
 
   // Deletar treino
   async function deleteWorkout(workoutId) {
-    if (confirm('Tem certeza que deseja deletar este treino?')) {
+    console.log('Deletando treino:', workoutId);
+    
+    if (confirm('⚠️ Tem certeza que deseja deletar este treino?')) {
       const result = await dbManager.deleteWorkout(workoutId);
       if (result.success) {
-        alert('Treino deletado com sucesso!');
+        alert('✓ Treino deletado com sucesso!');
         loadWorkouts();
       } else {
-        alert('Erro ao deletar treino: ' + result.error);
+        alert('❌ Erro ao deletar treino: ' + result.error);
       }
     }
   }
 
-  // Carregar dashboard quando página for carregada
-  loadPersonalDashboard();
+  // CARREGAR TUDO EM SEQUÊNCIA
+  console.log('Iniciando carregamento completo...');
+  
+  await loadPersonalData();
+  await loadStudents();
+  await loadWorkouts();
+  
+  console.log('=== DASHBOARD TOTALMENTE CARREGADO ===');
+})();
 </script>
 
 <style>

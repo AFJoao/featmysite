@@ -8,7 +8,14 @@
     </nav>
   </header>
 
-  <div style="max-width: 1200px; margin: 30px auto;">
+  <!-- Loading inicial -->
+  <div id="pageLoading" style="text-align: center; padding: 50px;">
+    <div class="spinner" style="margin: 0 auto;"></div>
+    <p>Carregando dados...</p>
+  </div>
+
+  <!-- Conteúdo principal (oculto inicialmente) -->
+  <div id="mainContent" style="display: none; max-width: 1200px; margin: 30px auto;">
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
       <!-- Coluna Esquerda: Formulário -->
       <div>
@@ -45,13 +52,11 @@
           <div class="day-box" data-day="sunday">Domingo</div>
         </div>
 
-        <h3 style="margin-top: 20px;">Exercícios Disponíveis</h3>
-        <div id="availableExercises" class="exercises-list">
-          <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
-        </div>
+        <h3 style="margin-top: 20px;">Exercícios Disponíveis (<span id="exercisesCount">0</span>)</h3>
+        <div id="availableExercises" class="exercises-list"></div>
 
-        <button onclick="clearSelection()" class="secondary" style="margin-top: 20px; width: 100%;">Limpar Seleção</button>
-        <button onclick="saveWorkout()" style="margin-top: 10px; width: 100%;">Salvar Treino</button>
+        <button id="clearSelectionBtn" class="secondary" style="margin-top: 20px; width: 100%;">Limpar Seleção</button>
+        <button id="saveWorkoutBtn" style="margin-top: 10px; width: 100%;">Salvar Treino</button>
       </div>
 
       <!-- Coluna Direita: Visualização -->
@@ -66,6 +71,9 @@
 </div>
 
 <script>
+(async function() {
+  console.log('=== PÁGINA CRIAR TREINO - INICIANDO ===');
+
   // Estado global
   const workoutState = {
     name: '',
@@ -93,18 +101,28 @@
     workoutState.dayExercises[day] = [];
   });
 
-  // Logout
-  document.getElementById('logoutBtn').addEventListener('click', async (e) => {
-    e.preventDefault();
-    await authManager.logout();
-    router.goToLogin();
+  // Aguardar DOM
+  await new Promise(resolve => {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', resolve);
+    } else {
+      resolve();
+    }
   });
+
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  console.log('✓ DOM pronto');
 
   // Carregar alunos
   async function loadStudents() {
     try {
+      console.log('Carregando alunos...');
       const students = await dbManager.getAllStudents();
+      console.log('Alunos carregados:', students.length);
+      
       const select = document.getElementById('studentSelect');
+      if (!select) return;
       
       students.forEach(student => {
         const option = document.createElement('option');
@@ -117,6 +135,8 @@
         workoutState.studentId = e.target.value;
         updatePreview();
       });
+
+      console.log('✓ Alunos carregados');
     } catch (error) {
       console.error('Erro ao carregar alunos:', error);
     }
@@ -125,11 +145,26 @@
   // Carregar exercícios
   async function loadExercises() {
     try {
+      console.log('=== CARREGANDO EXERCÍCIOS ===');
       const exercises = await dbManager.getPersonalExercises();
+      console.log('Exercícios retornados:', exercises.length);
+      
       const container = document.getElementById('availableExercises');
+      const countSpan = document.getElementById('exercisesCount');
+
+      if (!container || !countSpan) return;
+
+      countSpan.textContent = exercises.length;
 
       if (exercises.length === 0) {
-        container.innerHTML = '<p>Nenhum exercício disponível. <a href="#/personal/exercises">Criar exercício</a></p>';
+        container.innerHTML = `
+          <div class="card" style="background-color: #f5f5f5;">
+            <p style="margin: 0; color: #666;">
+              ⚠️ Nenhum exercício disponível.<br>
+              <a href="#/personal/exercises" style="font-weight: bold;">Criar exercício primeiro</a>
+            </p>
+          </div>
+        `;
       } else {
         // Armazenar exercícios no mapa
         exercises.forEach(ex => {
@@ -137,24 +172,250 @@
         });
 
         container.innerHTML = exercises.map(exercise => `
-          <div class="exercise-item">
-            <div class="exercise-info">
-              <h4>${exercise.name}</h4>
-              <p>${exercise.description}</p>
-            </div>
-            <div class="exercise-actions">
-              <button onclick="addExerciseToDay('${exercise.id}', '${exercise.name.replace(/'/g, "\\'")}', '${exercise.videoUrl || ''}')" class="secondary">Adicionar</button>
+          <div class="exercise-item" style="margin: 10px 0; padding: 15px; border: 1px solid #000;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div style="flex: 1;">
+                <h4 style="margin: 0 0 5px 0;">${exercise.name}</h4>
+                <p style="margin: 0; font-size: 12px; color: #666;">${exercise.description || 'Sem descrição'}</p>
+              </div>
+              <button 
+                data-exercise-id="${exercise.id}" 
+                class="add-exercise-btn secondary"
+                style="padding: 8px 15px; white-space: nowrap;">
+                + Adicionar
+              </button>
             </div>
           </div>
         `).join('');
+
+        // Adicionar event listeners
+        document.querySelectorAll('.add-exercise-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const exerciseId = btn.getAttribute('data-exercise-id');
+            addExerciseToDay(exerciseId);
+          });
+        });
+
+        console.log('✓ Exercícios renderizados');
       }
     } catch (error) {
-      console.error('Erro ao carregar exercícios:', error);
-      document.getElementById('availableExercises').innerHTML = '<p>Erro ao carregar exercícios.</p>';
+      console.error('❌ Erro ao carregar exercícios:', error);
+      const container = document.getElementById('availableExercises');
+      if (container) {
+        container.innerHTML = `
+          <div class="card" style="border-color: #cc0000;">
+            <p style="color: #cc0000;">
+              <strong>❌ Erro ao carregar exercícios.</strong><br>
+              ${error.message}
+            </p>
+          </div>
+        `;
+      }
     }
   }
 
-  // Selecionar/desselecionar dia
+  // Adicionar exercício ao dia
+  function addExerciseToDay(exerciseId) {
+    console.log('Adicionando exercício:', exerciseId);
+
+    const selectedDay = Object.keys(workoutState.selectedDays).find(day => workoutState.selectedDays[day]);
+    
+    if (!selectedDay) {
+      alert('⚠️ Selecione um dia primeiro!\n\nClique em um dos dias da semana antes de adicionar exercícios.');
+      return;
+    }
+
+    const exercise = workoutState.exercisesMap[exerciseId];
+    if (!exercise) {
+      alert('❌ Erro: exercício não encontrado');
+      return;
+    }
+
+    const sets = prompt('Quantas séries?', '3');
+    if (sets === null) return;
+
+    const reps = prompt('Quantas repetições?', '10');
+    if (reps === null) return;
+
+    const notes = prompt('Observações (opcional):', '');
+
+    workoutState.dayExercises[selectedDay].push({
+      exerciseId: exerciseId,
+      exerciseName: exercise.name,
+      videoUrl: exercise.videoUrl || '',
+      sets: sets,
+      reps: reps,
+      notes: notes || ''
+    });
+
+    alert('✓ Exercício adicionado!');
+    updatePreview();
+  }
+
+  // Atualizar preview
+  function updatePreview() {
+    const preview = document.getElementById('workoutPreview');
+    if (!preview) return;
+
+    let html = '<h3>' + (document.getElementById('workoutName')?.value || 'Sem nome') + '</h3>';
+    
+    const descValue = document.getElementById('workoutDescription')?.value;
+    if (descValue) {
+      html += '<p><strong>Descrição:</strong> ' + descValue + '</p>';
+    }
+
+    const studentSelect = document.getElementById('studentSelect');
+    if (studentSelect?.value) {
+      const studentName = studentSelect.options[studentSelect.selectedIndex].text;
+      html += '<p><strong>Aluno:</strong> ' + studentName + '</p>';
+    }
+
+    html += '<h4 style="margin-top: 15px;">Dias e Exercícios:</h4>';
+
+    let hasContent = false;
+
+    days.forEach(day => {
+      if (workoutState.selectedDays[day]) {
+        hasContent = true;
+        html += '<div style="margin: 10px 0; padding: 10px; border-left: 3px solid #000; background: #f9f9f9;">';
+        html += '<strong>' + dayNames[day] + '</strong>';
+        
+        if (workoutState.dayExercises[day].length === 0) {
+          html += '<p style="margin: 5px 0; font-size: 12px; color: #999;">Nenhum exercício</p>';
+        } else {
+          html += '<ul style="margin: 5px 0; padding-left: 20px;">';
+          workoutState.dayExercises[day].forEach((ex, idx) => {
+            html += '<li style="margin: 5px 0;">';
+            html += ex.exerciseName + ' - ' + ex.sets + 'x' + ex.reps;
+            if (ex.notes) html += ' <small>(' + ex.notes + ')</small>';
+            html += ' <button class="remove-exercise-btn danger" data-day="' + day + '" data-index="' + idx + '" style="padding: 2px 8px; font-size: 10px; margin-left: 5px;">✕</button>';
+            html += '</li>';
+          });
+          html += '</ul>';
+        }
+        html += '</div>';
+      }
+    });
+
+    if (!hasContent) {
+      html += '<p style="color: #999; font-style: italic;">Selecione os dias e adicione exercícios...</p>';
+    }
+
+    preview.innerHTML = html;
+    
+    // Event listeners para botões de remover
+    document.querySelectorAll('.remove-exercise-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const day = btn.getAttribute('data-day');
+        const index = parseInt(btn.getAttribute('data-index'));
+        workoutState.dayExercises[day].splice(index, 1);
+        updatePreview();
+      });
+    });
+  }
+
+  // Salvar treino
+  async function saveWorkout() {
+    console.log('=== SALVANDO TREINO ===');
+    
+    const name = document.getElementById('workoutName')?.value.trim();
+    const description = document.getElementById('workoutDescription')?.value.trim();
+    const errorDiv = document.getElementById('createError');
+    const successDiv = document.getElementById('createSuccess');
+    const saveBtn = document.getElementById('saveWorkoutBtn');
+
+    if (!errorDiv || !successDiv || !saveBtn) return;
+
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'none';
+
+    if (!name) {
+      errorDiv.textContent = '❌ Nome do treino é obrigatório';
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    const hasDays = Object.values(workoutState.selectedDays).some(v => v);
+    if (!hasDays) {
+      errorDiv.textContent = '❌ Selecione pelo menos um dia';
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    let hasExercises = false;
+    days.forEach(day => {
+      if (workoutState.selectedDays[day] && workoutState.dayExercises[day].length > 0) {
+        hasExercises = true;
+      }
+    });
+
+    if (!hasExercises) {
+      errorDiv.textContent = '❌ Adicione pelo menos um exercício';
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    const daysData = {};
+    days.forEach(day => {
+      if (workoutState.selectedDays[day]) {
+        daysData[day] = workoutState.dayExercises[day];
+      }
+    });
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = '⏳ Salvando...';
+
+    try {
+      const result = await dbManager.createWorkout(
+        name,
+        description || '',
+        daysData,
+        document.getElementById('studentSelect')?.value || null
+      );
+
+      console.log('Resultado:', result);
+
+      if (result.success) {
+        successDiv.innerHTML = '✓ <strong>Treino salvo!</strong><br><small>Redirecionando...</small>';
+        successDiv.style.display = 'block';
+        
+        setTimeout(() => {
+          router.goToPersonalDashboard();
+        }, 1500);
+      } else {
+        errorDiv.textContent = '❌ ' + result.error;
+        errorDiv.style.display = 'block';
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Salvar Treino';
+      }
+    } catch (error) {
+      console.error('Erro ao salvar:', error);
+      errorDiv.textContent = '❌ Erro: ' + error.message;
+      errorDiv.style.display = 'block';
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Salvar Treino';
+    }
+  }
+
+  // CARREGAR TUDO ANTES DE MOSTRAR
+  console.log('Carregando dados...');
+  
+  await loadStudents();
+  await loadExercises();
+  
+  console.log('✓ Dados carregados');
+
+  // Configurar event listeners
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await authManager.logout();
+      router.goToLogin();
+    });
+  }
+
+  // Dias
   document.querySelectorAll('.day-box').forEach(box => {
     box.addEventListener('click', () => {
       const day = box.dataset.day;
@@ -164,170 +425,32 @@
     });
   });
 
-  // Adicionar exercício ao dia
-  function addExerciseToDay(exerciseId, exerciseName, videoUrl) {
-    // Encontrar primeiro dia selecionado
-    const selectedDay = Object.keys(workoutState.selectedDays).find(day => workoutState.selectedDays[day]);
-    
-    if (!selectedDay) {
-      alert('Selecione um dia primeiro!');
-      return;
-    }
-
-    // Pedir informações do exercício
-    const sets = prompt('Quantas séries?', '3');
-    if (sets === null) return;
-
-    const reps = prompt('Quantas repetições?', '10');
-    if (reps === null) return;
-
-    const notes = prompt('Observações (opcional):', '');
-
-    // Adicionar ao dia
-    workoutState.dayExercises[selectedDay].push({
-      exerciseId: exerciseId,
-      exerciseName: exerciseName,
-      videoUrl: videoUrl || '',
-      sets: sets,
-      reps: reps,
-      notes: notes
-    });
-
-    updatePreview();
-  }
-
-  // Atualizar visualização
-  function updatePreview() {
-    const preview = document.getElementById('workoutPreview');
-    let html = '<h3>' + (document.getElementById('workoutName').value || 'Sem nome') + '</h3>';
-    
-    if (document.getElementById('workoutDescription').value) {
-      html += '<p><strong>Descrição:</strong> ' + document.getElementById('workoutDescription').value + '</p>';
-    }
-
-    const studentSelect = document.getElementById('studentSelect');
-    if (studentSelect.value) {
-      const studentName = studentSelect.options[studentSelect.selectedIndex].text;
-      html += '<p><strong>Aluno:</strong> ' + studentName + '</p>';
-    }
-
-    html += '<h4 style="margin-top: 15px;">Dias e Exercícios:</h4>';
-
-    days.forEach(day => {
-      if (workoutState.selectedDays[day]) {
-        html += '<div style="margin: 10px 0; padding: 10px; border-left: 2px solid #000000;">';
-        html += '<strong>' + dayNames[day] + '</strong>';
-        
-        if (workoutState.dayExercises[day].length === 0) {
-          html += '<p style="margin: 5px 0; font-size: 12px; color: #999;">Nenhum exercício</p>';
-        } else {
-          html += '<ul style="margin: 5px 0; padding-left: 20px;">';
-          workoutState.dayExercises[day].forEach((ex, idx) => {
-            html += '<li>' + ex.exerciseName + ' - ' + ex.sets + 'x' + ex.reps;
-            if (ex.notes) html += ' (' + ex.notes + ')';
-            html += ' <button onclick="removeExercise(\'' + day + '\', ' + idx + ')" class="danger" style="padding: 2px 5px; font-size: 10px;">X</button></li>';
-          });
-          html += '</ul>';
-        }
-        html += '</div>';
-      }
-    });
-
-    preview.innerHTML = html;
-  }
-
-  // Remover exercício
-  function removeExercise(day, index) {
-    workoutState.dayExercises[day].splice(index, 1);
-    updatePreview();
-  }
-
-  // Limpar seleção
-  function clearSelection() {
-    workoutState.name = '';
-    workoutState.description = '';
-    workoutState.studentId = '';
+  // Botões
+  document.getElementById('workoutName')?.addEventListener('input', updatePreview);
+  document.getElementById('workoutDescription')?.addEventListener('input', updatePreview);
+  document.getElementById('clearSelectionBtn')?.addEventListener('click', () => {
+    if (!confirm('Limpar tudo?')) return;
     
     days.forEach(day => {
       workoutState.selectedDays[day] = false;
       workoutState.dayExercises[day] = [];
     });
-
+    
     document.getElementById('workoutName').value = '';
     document.getElementById('workoutDescription').value = '';
     document.getElementById('studentSelect').value = '';
+    document.querySelectorAll('.day-box').forEach(box => box.classList.remove('selected'));
     
-    document.querySelectorAll('.day-box').forEach(box => {
-      box.classList.remove('selected');
-    });
-
     updatePreview();
-  }
+  });
+  document.getElementById('saveWorkoutBtn')?.addEventListener('click', saveWorkout);
 
-  // Salvar treino
-  async function saveWorkout() {
-    const name = document.getElementById('workoutName').value;
-    const description = document.getElementById('workoutDescription').value;
-    const errorDiv = document.getElementById('createError');
-    const successDiv = document.getElementById('createSuccess');
-
-    errorDiv.style.display = 'none';
-    successDiv.style.display = 'none';
-
-    if (!name) {
-      errorDiv.textContent = 'Nome do treino é obrigatório';
-      errorDiv.style.display = 'block';
-      return;
-    }
-
-    // Verificar se há dias selecionados
-    const hasDays = Object.values(workoutState.selectedDays).some(v => v);
-    if (!hasDays) {
-      errorDiv.textContent = 'Selecione pelo menos um dia';
-      errorDiv.style.display = 'block';
-      return;
-    }
-
-    // Preparar dados dos dias
-    const daysData = {};
-    days.forEach(day => {
-      if (workoutState.selectedDays[day]) {
-        daysData[day] = workoutState.dayExercises[day];
-      }
-    });
-
-    try {
-      const result = await dbManager.createWorkout(
-        name,
-        description,
-        daysData,
-        document.getElementById('studentSelect').value || null
-      );
-
-      if (result.success) {
-        successDiv.textContent = 'Treino salvo com sucesso!';
-        successDiv.style.display = 'block';
-        
-        setTimeout(() => {
-          router.goToPersonalDashboard();
-        }, 1500);
-      } else {
-        errorDiv.textContent = result.error;
-        errorDiv.style.display = 'block';
-      }
-    } catch (error) {
-      console.error('Erro ao salvar treino:', error);
-      errorDiv.textContent = 'Erro ao salvar treino: ' + error.message;
-      errorDiv.style.display = 'block';
-    }
-  }
-
-  // Monitorar mudanças no nome e descrição
-  document.getElementById('workoutName').addEventListener('input', updatePreview);
-  document.getElementById('workoutDescription').addEventListener('input', updatePreview);
-
-  // Carregar dados iniciais
-  loadStudents();
-  loadExercises();
   updatePreview();
+
+  // MOSTRAR CONTEÚDO
+  document.getElementById('pageLoading').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'block';
+  
+  console.log('=== PÁGINA TOTALMENTE CARREGADA ===');
+})();
 </script>
