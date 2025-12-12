@@ -31,19 +31,6 @@
         <p style="color: #999; font-size: 14px; margin: 0;">Carregando semana...</p>
       </div>
     </div>
-
-    <div style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-      <h3 style="font-size: 20px; font-weight: 600; margin: 0 0 20px 0; display: flex; align-items: center; gap: 10px;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2">
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-          <line x1="16" y1="2" x2="16" y2="6"></line>
-          <line x1="8" y1="2" x2="8" y2="6"></line>
-          <line x1="3" y1="10" x2="21" y2="10"></line>
-        </svg>
-        Todos os Treinos
-      </h3>
-      <div id="workoutsList"></div>
-    </div>
   </div>
 </div>
 
@@ -157,7 +144,6 @@
     try {
       const workouts = await dbManager.getStudentWorkouts();
       const weeklyContainer = document.getElementById('weeklyWorkouts');
-      const allWorkoutsContainer = document.getElementById('workoutsList');
       
       if (!workouts || workouts.length === 0) {
         weeklyContainer.innerHTML = `
@@ -171,7 +157,6 @@
             <p style="color: #999; font-size: 14px; margin: 5px 0 0 0;">Aguarde seu personal trainer atribuir treinos</p>
           </div>
         `;
-        allWorkoutsContainer.innerHTML = '';
         return;
       }
 
@@ -239,7 +224,6 @@
           for (const w of dayWorkouts) {
             const progress = await calculateWorkoutProgress(w);
             const exerciseCount = (w.days[day] || []).length;
-            const muscleGroups = [...new Set((w.days[day] || []).map(e => e.muscleGroup || 'Geral'))];
             const isCompleted = progress.percentage === 100;
             
             dayHTML += `
@@ -277,82 +261,6 @@
         }
       }
 
-      allWorkoutsContainer.innerHTML = workouts.map(workout => {
-        const daysWithExercises = Object.keys(workout.days || {}).filter(day => 
-          workout.days[day] && workout.days[day].length > 0
-        ).map(day => daysMap[day].name);
-
-        const totalExercises = Object.values(workout.days || {}).reduce((sum, dayEx) => sum + (dayEx?.length || 0), 0);
-
-        return `
-          <div id="workout-card-${workout.id}" style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 20px; margin-bottom: 15px; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.03); position: relative;" onclick="viewWorkoutFunc('${workout.id}')" onmouseover="this.style.borderColor='#000000'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';" onmouseout="this.style.borderColor='#e0e0e0'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.03)';">
-            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
-              <h4 style="font-size: 18px; font-weight: 600; margin: 0; color: #000000; flex: 1;">${workout.name}</h4>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-            </div>
-            ${workout.description ? `<p style="color: #666; font-size: 14px; margin: 0 0 12px 0; line-height: 1.5;">${workout.description}</p>` : ''}
-            <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px;">
-              <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #666;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-                ${daysWithExercises.join(', ')}
-              </div>
-              <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #666;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-                ${totalExercises} exercícios
-              </div>
-            </div>
-            <div id="progress-${workout.id}" style="margin-top: 12px;">
-              <div style="text-align: center; padding: 8px;">
-                <div class="spinner" style="width: 16px; height: 16px; border-width: 2px; margin: 0 auto;"></div>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      // Carregar progresso de cada treino na lista completa
-      for (const workout of workouts) {
-        const progress = await calculateWorkoutProgress(workout);
-        const progressDiv = document.getElementById(`progress-${workout.id}`);
-        const workoutCard = document.getElementById(`workout-card-${workout.id}`);
-        
-        if (progressDiv) {
-          const isCompleted = progress.percentage === 100;
-          
-          if (isCompleted && workoutCard) {
-            workoutCard.style.background = 'linear-gradient(135deg, #f0fff4 0%, #dcfce7 100%)';
-            workoutCard.style.borderColor = '#86efac';
-          }
-          
-          progressDiv.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <span style="font-size: 12px; color: #666; font-weight: 600; display: flex; align-items: center; gap: 6px;">
-                ${isCompleted ? `
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                  </svg>
-                ` : ''}
-                PROGRESSO
-              </span>
-              <span style="font-size: 12px; color: ${isCompleted ? '#22c55e' : '#000000'}; font-weight: 700;">${progress.completed}/${progress.total} (${progress.percentage}%)</span>
-            </div>
-            <div style="width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">
-              <div style="width: ${progress.percentage}%; height: 100%; background: ${isCompleted ? '#22c55e' : '#000000'}; transition: width 0.5s; border-radius: 4px;"></div>
-            </div>
-          `;
-        }
-      }
-
     } catch (error) {
       console.error('Erro ao carregar treinos:', error);
       document.getElementById('weeklyWorkouts').innerHTML = `
@@ -372,3 +280,17 @@
   await loadWorkouts();
 })();
 </script>
+
+<style>
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 4px solid #ddd;
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>
