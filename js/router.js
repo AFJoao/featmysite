@@ -12,6 +12,7 @@ class Router {
       '/personal/dashboard': 'pages/personal/dashboard.html',
       '/personal/exercises': 'pages/personal/exercises.html',
       '/personal/create-workout': 'pages/personal/create-workout.html',
+      '/personal/student/:id': 'pages/personal/student-details.html',
       '/student/dashboard': 'pages/student/dashboard.html',
       '/student/view-workout': 'pages/student/view-workout.html'
     };
@@ -20,6 +21,7 @@ class Router {
       '/personal/dashboard': 'personal',
       '/personal/exercises': 'personal',
       '/personal/create-workout': 'personal',
+      '/personal/student/:id': 'personal',
       '/student/dashboard': 'student',
       '/student/view-workout': 'student'
     };
@@ -62,6 +64,70 @@ class Router {
     });
   }
 
+  matchRoute(path) {
+    // Verificar rota exata primeiro
+    if (this.routes[path]) {
+      return { route: path, params: {} };
+    }
+
+    // Verificar rotas com parâmetros
+    for (const [route, file] of Object.entries(this.routes)) {
+      if (!route.includes(':')) continue;
+
+      const routeParts = route.split('/');
+      const pathParts = path.split('/');
+
+      if (routeParts.length !== pathParts.length) continue;
+
+      const params = {};
+      let match = true;
+
+      for (let i = 0; i < routeParts.length; i++) {
+        if (routeParts[i].startsWith(':')) {
+          params[routeParts[i].slice(1)] = pathParts[i];
+        } else if (routeParts[i] !== pathParts[i]) {
+          match = false;
+          break;
+        }
+      }
+
+      if (match) {
+        return { route, params };
+      }
+    }
+
+    return null;
+  }
+
+  getRequiredType(path) {
+    // Verificar tipo exato
+    if (this.protectedRoutes[path]) {
+      return this.protectedRoutes[path];
+    }
+
+    // Verificar rotas com parâmetros
+    for (const [route, type] of Object.entries(this.protectedRoutes)) {
+      if (!route.includes(':')) continue;
+
+      const routeParts = route.split('/');
+      const pathParts = path.split('/');
+
+      if (routeParts.length !== pathParts.length) continue;
+
+      let match = true;
+      for (let i = 0; i < routeParts.length; i++) {
+        if (!routeParts[i].startsWith(':') && routeParts[i] !== pathParts[i]) {
+          match = false;
+          break;
+        }
+      }
+
+      if (match) return type;
+    }
+
+    return null;
+  }
+
   async navigate(path = '/') {
     console.log('=== NAVEGANDO PARA:', path, '===');
 
@@ -73,7 +139,7 @@ class Router {
       await this.waitForAuth();
     }
 
-    const requiredType = this.protectedRoutes[path];
+    const requiredType = this.getRequiredType(path);
     const isAuthenticated = authManager.isAuthenticated();
     const currentUserType = authManager.getCurrentUserType();
 
@@ -98,7 +164,6 @@ class Router {
           ? '/personal/dashboard' 
           : '/student/dashboard';
         
-        // Só redirecionar se não estiver tentando ir para o próprio dashboard
         if (path !== redirectPath) {
           console.log('Redirecionando para:', redirectPath);
           window.location.hash = '#' + redirectPath;
@@ -128,13 +193,18 @@ class Router {
   }
 
   async loadPage(path) {
-    const pagePath = this.routes[path];
+    const matchResult = this.matchRoute(path);
     
-    if (!pagePath) {
+    if (!matchResult) {
       console.log('❌ Rota não encontrada:', path);
       this.loadPage('/login');
       return;
     }
+
+    const pagePath = this.routes[matchResult.route];
+    
+    // Armazenar parâmetros da rota para uso nas páginas
+    window.routeParams = matchResult.params;
 
     try {
       console.log('Carregando página:', pagePath);
@@ -225,6 +295,14 @@ class Router {
 
   goToViewWorkout() {
     this.navigate('/student/view-workout');
+  }
+
+  goToStudentDetails(studentId) {
+    this.navigate(`/personal/student/${studentId}`);
+  }
+
+  goTo(path) {
+    this.navigate(path);
   }
 
   async init() {

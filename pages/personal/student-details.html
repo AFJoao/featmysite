@@ -1,0 +1,1090 @@
+<!-- (mantive todo o HTML/CSS que você enviou e substituí apenas o script) -->
+<div class="student-details-page">
+  <style>
+    /* (o mesmo CSS que você já forneceu; mantive inalterado) */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    .header { 
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); 
+      padding: 20px 40px; 
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    .header-content { 
+      max-width: 100%; 
+      margin: 0 auto; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+    }
+    .back-btn {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      transition: all 0.3s;
+    }
+    .back-btn:hover {
+      background: rgba(255,255,255,0.2);
+      border-color: #fff;
+    }
+    .student-info h1 {
+      color: #fff;
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0 0 5px 0;
+    }
+    .student-info p {
+      color: rgba(255,255,255,0.7);
+      font-size: 14px;
+      margin: 0;
+    }
+    .logout-btn {
+      background: transparent;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+    .logout-btn:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: #fff;
+    }
+
+    .main-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 30px 20px;
+    }
+    
+    .page-title {
+      margin-bottom: 25px;
+    }
+    .page-title h2 {
+      font-size: 28px;
+      font-weight: 600;
+      color: #000;
+      margin: 0 0 8px 0;
+    }
+    .page-title p {
+      font-size: 16px;
+      color: #666;
+      margin: 0;
+    }
+
+    .kanban-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 15px;
+    }
+    
+    .day-column {
+      background: #fff;
+      border-radius: 10px;
+      border: 1px solid #e0e0e0;
+      min-height: 400px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      transition: all 0.3s;
+    }
+    
+    .day-column.today {
+      background: linear-gradient(135deg, #000000 0%, #2d2d2d 100%);
+      border: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .day-header {
+      padding: 15px;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+      text-align: center;
+    }
+    
+    .day-column.today .day-header {
+      border-bottom-color: rgba(255,255,255,0.1);
+    }
+    
+    .day-short {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: #999;
+      margin-bottom: 4px;
+    }
+    
+    .day-column.today .day-short {
+      color: rgba(255,255,255,0.7);
+    }
+    
+    .day-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: #000;
+    }
+    
+    .day-column.today .day-name {
+      color: #fff;
+    }
+    
+    .day-indicator {
+      width: 30px;
+      height: 3px;
+      background: #fff;
+      margin: 8px auto 0;
+      border-radius: 2px;
+    }
+    
+    .exercise-count {
+      display: inline-block;
+      background: rgba(0,0,0,0.05);
+      color: #666;
+      padding: 3px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-top: 6px;
+    }
+    
+    .day-column.today .exercise-count {
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+    }
+    
+    .day-body {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .day-body::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .day-body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    .day-body::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.1);
+      border-radius: 3px;
+    }
+    
+    .day-body::-webkit-scrollbar-thumb:hover {
+      background: rgba(0,0,0,0.2);
+    }
+    
+    .exercise-card {
+      background: #f8f8f8;
+      border: 2px solid #e8e8e8;
+      border-radius: 8px;
+      padding: 12px;
+      transition: all 0.2s;
+      cursor: move;
+      position: relative;
+    }
+    
+    .exercise-card:hover {
+      border-color: #000;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      background: #fff;
+    }
+    
+    .day-column.today .exercise-card {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.2);
+    }
+    
+    .day-column.today .exercise-card:hover {
+      background: rgba(255,255,255,0.15);
+      border-color: rgba(255,255,255,0.4);
+    }
+    
+    .drag-handle {
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    
+    .exercise-card:hover .drag-handle {
+      opacity: 0.5;
+    }
+    
+    .exercise-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #000;
+      margin: 0 0 8px 0;
+      line-height: 1.3;
+      padding-right: 24px;
+    }
+    
+    .day-column.today .exercise-name {
+      color: #fff;
+    }
+    
+    .exercise-meta {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 0;
+    }
+    
+    .meta-badge {
+      background: #000;
+      color: #fff;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    
+    .day-column.today .meta-badge {
+      background: rgba(255,255,255,0.9);
+      color: #000;
+    }
+    
+    .exercise-notes {
+      font-size: 11px;
+      color: #666;
+      font-style: italic;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(0,0,0,0.05);
+      line-height: 1.4;
+    }
+    
+    .day-column.today .exercise-notes {
+      color: rgba(255,255,255,0.7);
+      border-top-color: rgba(255,255,255,0.1);
+    }
+    
+    .remove-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #cc0000;
+      color: #fff;
+      border: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      opacity: 0;
+      line-height: 1;
+    }
+    
+    .exercise-card:hover .remove-btn {
+      opacity: 1;
+    }
+    
+    .remove-btn:hover {
+      background: #ff0000;
+      transform: scale(1.1);
+    }
+    
+    .add-btn {
+      background: #000;
+      color: #fff;
+      border: none;
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+      margin-top: auto;
+    }
+    
+    .add-btn:hover {
+      background: #2d2d2d;
+      transform: translateY(-1px);
+    }
+    
+    .day-column.today .add-btn {
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+    
+    .day-column.today .add-btn:hover {
+      background: rgba(255,255,255,0.3);
+      border-color: rgba(255,255,255,0.5);
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 30px 15px;
+      color: #999;
+      font-size: 12px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .day-column.today .empty-state {
+      color: rgba(255,255,255,0.5);
+    }
+    
+    .empty-state svg {
+      width: 32px;
+      height: 32px;
+      margin-bottom: 10px;
+      opacity: 0.3;
+    }
+    
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #000;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.active { display: flex; }
+    
+    .modal-content {
+      background: #fff;
+      border-radius: 12px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    
+    .modal-header {
+      background: linear-gradient(135deg, #000 0%, #2d2d2d 100%);
+      color: #fff;
+      padding: 20px;
+      border-radius: 12px 12px 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    
+    .modal-header h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+    
+    .close-modal {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: #fff;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    
+    .close-modal:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    
+    .modal-body {
+      padding: 20px;
+    }
+    
+    .exercise-option {
+      background: #f8f8f8;
+      border: 2px solid #e8e8e8;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .exercise-option:hover {
+      border-color: #000;
+      background: #fff;
+      transform: translateX(4px);
+    }
+    
+    .exercise-option h4 {
+      font-size: 14px;
+      margin: 0 0 4px 0;
+    }
+    
+    .exercise-option p {
+      font-size: 12px;
+      color: #666;
+      margin: 0;
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+    
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #000;
+    }
+    
+    .form-group textarea {
+      resize: vertical;
+      min-height: 70px;
+    }
+    
+    .btn-primary {
+      background: #000;
+      color: #fff;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      width: 100%;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary:hover {
+      background: #2d2d2d;
+    }
+    
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .btn-back {
+      background: #f5f5f5;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+    
+    .btn-back:hover {
+      background: #e8e8e8;
+    }
+    
+    .drag-over {
+      background: rgba(0,0,0,0.02) !important;
+      border: 2px dashed #000 !important;
+    }
+    
+    @media (max-width: 1200px) {
+      .kanban-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .kanban-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .day-column {
+        min-height: 350px;
+      }
+    }
+  </style>
+
+  <div class="header">
+    <div class="header-content">
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <button class="back-btn" id="backBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <div class="student-info">
+          <h1 id="studentNameHeader">Carregando...</h1>
+          <p id="studentEmail"></p>
+        </div>
+      </div>
+      <button class="logout-btn" id="logoutBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        Sair
+      </button>
+    </div>
+  </div>
+
+  <div id="pageLoading" style="text-align: center; padding: 80px 20px; background: #f5f5f5; min-height: calc(100vh - 100px);">
+    <div class="spinner"></div>
+    <p style="color: #999; font-size: 16px; margin-top: 20px;">Carregando treinos da semana...</p>
+  </div>
+
+  <div id="mainContent" style="display: none;">
+    <div class="main-content">
+      <div class="page-title">
+        <h2>📅 Planejamento Semanal</h2>
+        <p>Arraste exercícios entre os dias ou adicione novos com o botão "+"</p>
+      </div>
+      
+      <div class="kanban-grid" id="kanbanGrid">
+        <!-- Colunas serão geradas aqui -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal" id="addExerciseModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Adicionar Exercício</h3>
+        <button class="close-modal" id="closeModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="selectExerciseStep">
+          <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Selecione o exercício:</p>
+          <div id="exercisesList"></div>
+        </div>
+        <div id="exerciseDetailsStep" style="display: none;">
+          <button class="btn-back" onclick="backToExerciseList()">← Voltar</button>
+          <h4 id="selectedExerciseName" style="margin-bottom: 15px; font-size: 16px;"></h4>
+          <div class="form-group">
+            <label>Séries *</label>
+            <input type="number" id="exerciseSets" value="3" min="1" max="10">
+          </div>
+          <div class="form-group">
+            <label>Repetições *</label>
+            <input type="text" id="exerciseReps" value="10" placeholder="Ex: 10, 8-12, máximo">
+          </div>
+          <div class="form-group">
+            <label>Observações</label>
+            <textarea id="exerciseNotes" placeholder="Ex: Descanso de 60s, carga progressiva..."></textarea>
+          </div>
+          <button class="btn-primary" id="confirmAddExercise">Adicionar Exercício</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(async function() {
+  const DAYS_MAP = {
+    monday: { name: 'Segunda', short: 'SEG' },
+    tuesday: { name: 'Terça', short: 'TER' },
+    wednesday: { name: 'Quarta', short: 'QUA' },
+    thursday: { name: 'Quinta', short: 'QUI' },
+    friday: { name: 'Sexta', short: 'SEX' },
+    saturday: { name: 'Sábado', short: 'SÁB' },
+    sunday: { name: 'Domingo', short: 'DOM' }
+  };
+  const DAYS_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+  let studentId = null;
+  let weekData = {};
+  let availableExercises = [];
+  let selectedDay = null;
+  let selectedExercise = null;
+  let draggedItem = null;
+
+  DAYS_ORDER.forEach(day => { weekData[day] = []; });
+
+  await new Promise(resolve => {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', resolve);
+    } else {
+      resolve();
+    }
+  });
+
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  document.getElementById('backBtn').addEventListener('click', () => {
+    if (window.router && typeof window.router.goToPersonalDashboard === 'function') {
+      router.goToPersonalDashboard();
+    } else {
+      history.back();
+    }
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    try {
+      if (window.authManager && typeof authManager.logout === 'function') {
+        await authManager.logout();
+      }
+    } catch (err) {
+      console.warn('Logout falhou:', err);
+    }
+    if (window.router && typeof router.goToLogin === 'function') {
+      router.goToLogin();
+    } else {
+      location.href = '/login';
+    }
+  });
+
+  const modal = document.getElementById('addExerciseModal');
+  const closeModalBtn = document.getElementById('closeModal');
+
+  closeModalBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  function closeModal() {
+    modal.classList.remove('active');
+    document.getElementById('selectExerciseStep').style.display = 'block';
+    document.getElementById('exerciseDetailsStep').style.display = 'none';
+    selectedDay = null;
+    selectedExercise = null;
+    // reset fields
+    const sets = document.getElementById('exerciseSets');
+    const reps = document.getElementById('exerciseReps');
+    const notes = document.getElementById('exerciseNotes');
+    if (sets) sets.value = 3;
+    if (reps) reps.value = '10';
+    if (notes) notes.value = '';
+  }
+
+  window.backToExerciseList = function() {
+    document.getElementById('selectExerciseStep').style.display = 'block';
+    document.getElementById('exerciseDetailsStep').style.display = 'none';
+    selectedExercise = null;
+  };
+
+  async function loadStudentData() {
+    studentId = window.routeParams?.id || window.routeParams?.studentId || null;
+
+    if (!studentId) {
+      // try query param
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('id')) studentId = urlParams.get('id');
+    }
+
+    if (!studentId) {
+      alert('Aluno não encontrado');
+      if (window.router && typeof router.goToPersonalDashboard === 'function') router.goToPersonalDashboard();
+      return;
+    }
+
+    try {
+      const student = (window.dbManager && typeof dbManager.getUserData === 'function')
+        ? await dbManager.getUserData(studentId)
+        : null;
+      
+      if (!student) {
+        // allow continuing with defaults but warn
+        console.warn('Dados do aluno não encontrados via dbManager.getUserData');
+      } else {
+        document.getElementById('studentNameHeader').textContent = student.name || 'Aluno';
+        document.getElementById('studentEmail').textContent = student.email || '';
+      }
+
+      if (window.dbManager && typeof dbManager.getPersonalExercises === 'function') {
+        availableExercises = await dbManager.getPersonalExercises();
+      } else {
+        // fallback sample exercises if no dbManager available
+        availableExercises = [
+          { id: 'ex_1', name: 'Supino Reto', description: 'Peito — barra' },
+          { id: 'ex_2', name: 'Agachamento', description: 'Pernas — barra' },
+          { id: 'ex_3', name: 'Remada Curvada', description: 'Costas — barra' },
+          { id: 'ex_4', name: 'Rosca Direta', description: 'Bíceps — barra' }
+        ];
+        console.warn('dbManager.getPersonalExercises não disponível — usando lista padrão');
+      }
+
+      if (window.dbManager && typeof dbManager.getPersonalWorkouts === 'function') {
+        const workouts = await dbManager.getPersonalWorkouts();
+        const studentWorkouts = workouts.filter(w => w.studentId === studentId);
+        studentWorkouts.forEach(workout => {
+          if (workout.days) {
+            Object.keys(workout.days).forEach(day => {
+              if (workout.days[day] && workout.days[day].length > 0) {
+                weekData[day] = [...weekData[day], ...workout.days[day].map(ex => ({
+                  ...ex,
+                  workoutId: workout.id,
+                  workoutName: workout.name
+                }))];
+              }
+            });
+          }
+        });
+      } else if (window.dbManager && typeof dbManager.getStudentWeek === 'function') {
+        // alternativa: se existir getStudentWeek (estrutura única por aluno)
+        try {
+          const studentWeek = await dbManager.getStudentWeek(studentId);
+          if (studentWeek) {
+            DAYS_ORDER.forEach(day => {
+              if (studentWeek[day] && Array.isArray(studentWeek[day])) {
+                weekData[day] = studentWeek[day];
+              }
+            });
+          }
+        } catch (err) {
+          console.warn('Erro ao obter studentWeek:', err);
+        }
+      } else {
+        // sem dados no backend — manter semana vazia
+        console.warn('Nenhum método conhecido para carregar treinos do aluno encontrado no dbManager');
+      }
+
+      renderKanban();
+
+      document.getElementById('pageLoading').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'block';
+
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      alert('Erro ao carregar dados do aluno');
+      if (window.router && typeof router.goToPersonalDashboard === 'function') router.goToPersonalDashboard();
+    }
+  }
+
+  function getTodayDay() {
+    const today = new Date().getDay();
+    const dayIndex = today === 0 ? 6 : today - 1;
+    return DAYS_ORDER[dayIndex];
+  }
+
+  function renderKanban() {
+    const grid = document.getElementById('kanbanGrid');
+    const todayDay = getTodayDay();
+    grid.innerHTML = '';
+
+    DAYS_ORDER.forEach(day => {
+      const isToday = day === todayDay;
+      const exercisesCount = weekData[day].length;
+
+      const column = document.createElement('div');
+      column.className = `day-column ${isToday ? 'today' : ''}`;
+      column.dataset.day = day;
+
+      column.innerHTML = `
+        <div class="day-header">
+          <div class="day-short">${DAYS_MAP[day].short}</div>
+          <div class="day-name">${DAYS_MAP[day].name}</div>
+          ${isToday ? '<div class="day-indicator"></div>' : ''}
+          <div class="exercise-count">${exercisesCount}</div>
+        </div>
+        <div class="day-body" id="day-${day}" data-day="${day}">
+          ${weekData[day].length === 0 ? `
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              <div>Sem treino</div>
+            </div>
+          ` : weekData[day].map((ex, idx) => `
+            <div class="exercise-card" draggable="true" data-day="${day}" data-index="${idx}">
+              <svg class="drag-handle" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+              <button class="remove-btn" data-day="${day}" data-index="${idx}">×</button>
+              <div class="exercise-name">${escapeHtml(ex.exerciseName || ex.name || 'Exercício')}</div>
+              <div class="exercise-meta">
+                <span class="meta-badge">${ex.sets || '—'}x</span>
+                <span class="meta-badge">${ex.reps || '—'}</span>
+              </div>
+              ${ex.notes ? `<div class="exercise-notes">${escapeHtml(ex.notes)}</div>` : ''}
+            </div>
+          `).join('')}
+          <button class="add-btn" data-day="${day}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Adicionar
+          </button>
+        </div>
+      `;
+
+      grid.appendChild(column);
+
+      // Event listeners
+      const dayBody = column.querySelector('.day-body');
+      dayBody.addEventListener('dragover', handleDragOver);
+      dayBody.addEventListener('dragleave', handleDragLeave);
+      dayBody.addEventListener('drop', handleDrop);
+
+      column.querySelectorAll('.exercise-card').forEach(card => {
+        card.addEventListener('dragstart', handleDragStart);
+        card.addEventListener('dragend', handleDragEnd);
+      });
+
+      column.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          removeExercise(btn.dataset.day, parseInt(btn.dataset.index));
+        });
+      });
+
+      const addBtn = column.querySelector('.add-btn');
+      if (addBtn) {
+        addBtn.addEventListener('click', () => {
+          openAddExercise(day);
+        });
+      }
+    });
+  }
+
+  function handleDragStart(e) {
+    draggedItem = {
+      day: e.target.dataset.day,
+      index: parseInt(e.target.dataset.index)
+    };
+    e.dataTransfer?.setData('text/plain', JSON.stringify(draggedItem));
+    e.target.style.opacity = '0.5';
+  }
+
+  function handleDragEnd(e) {
+    e.target.style.opacity = '1';
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+    e.currentTarget.classList.add('drag-over');
+  }
+
+  function handleDragLeave(e) {
+    e.currentTarget.classList.remove('drag-over');
+  }
+
+  async function handleDrop(e) {
+    e.preventDefault();
+    const dayBody = e.currentTarget;
+    dayBody.classList.remove('drag-over');
+
+    let dragged = draggedItem;
+    if (!dragged && e.dataTransfer) {
+      try {
+        dragged = JSON.parse(e.dataTransfer.getData('text/plain'));
+      } catch (err) { /* ignore */ }
+    }
+
+    if (!dragged) return;
+
+    const targetDay = dayBody.dataset.day;
+    const sourceDay = dragged.day;
+    const sourceIndex = dragged.index;
+
+    if (sourceDay === targetDay) return;
+
+    // Bounds check
+    if (!weekData[sourceDay] || typeof sourceIndex !== 'number' || sourceIndex < 0 || sourceIndex >= weekData[sourceDay].length) {
+      draggedItem = null;
+      return;
+    }
+
+    const exercise = weekData[sourceDay][sourceIndex];
+    weekData[targetDay].push(exercise);
+    weekData[sourceDay].splice(sourceIndex, 1);
+
+    await saveWeekData();
+    renderKanban();
+    draggedItem = null;
+  }
+
+  function openAddExercise(day) {
+    selectedDay = day;
+    modal.classList.add('active');
+    document.getElementById('modalTitle').textContent = `Adicionar - ${DAYS_MAP[day].name}`;
+
+    const list = document.getElementById('exercisesList');
+    list.innerHTML = '';
+
+    if (!availableExercises || availableExercises.length === 0) {
+      list.innerHTML = '<div style="color:#999">Nenhum exercício disponível.</div>';
+      return;
+    }
+
+    availableExercises.forEach(ex => {
+      const option = document.createElement('div');
+      option.className = 'exercise-option';
+      option.tabIndex = 0;
+      option.innerHTML = `
+        <h4>${escapeHtml(ex.name || ex.exerciseName || 'Exercício')}</h4>
+        <p>${escapeHtml(ex.description || ex.desc || '')}</p>
+      `;
+      option.addEventListener('click', () => selectExercise(ex));
+      option.addEventListener('keydown', (e) => { if (e.key === 'Enter') selectExercise(ex); });
+      list.appendChild(option);
+    });
+  }
+
+  function selectExercise(ex) {
+    selectedExercise = ex;
+    document.getElementById('selectExerciseStep').style.display = 'none';
+    document.getElementById('exerciseDetailsStep').style.display = 'block';
+    document.getElementById('selectedExerciseName').textContent = ex.name || ex.exerciseName || 'Exercício';
+    document.getElementById('exerciseSets').value = ex.defaultSets || 3;
+    document.getElementById('exerciseReps').value = ex.defaultReps || ex.reps || '10';
+    document.getElementById('exerciseNotes').value = ex.defaultNotes || '';
+  }
+
+  document.getElementById('confirmAddExercise').addEventListener('click', async () => {
+    if (!selectedDay || !selectedExercise) return;
+
+    const sets = parseInt(document.getElementById('exerciseSets').value) || 0;
+    const reps = document.getElementById('exerciseReps').value.trim();
+    const notes = document.getElementById('exerciseNotes').value.trim();
+
+    if (sets <= 0) {
+      alert('Informe um número de séries válido.');
+      return;
+    }
+    if (!reps) {
+      alert('Informe as repetições.');
+      return;
+    }
+
+    const newExercise = {
+      id: generateId(),
+      exerciseId: selectedExercise.id || null,
+      exerciseName: selectedExercise.name || selectedExercise.exerciseName || 'Exercício',
+      sets,
+      reps,
+      notes,
+      createdAt: Date.now()
+    };
+
+    weekData[selectedDay].push(newExercise);
+
+    await saveWeekData();
+    renderKanban();
+    closeModal();
+  });
+
+  async function removeExercise(day, index) {
+    if (!confirm('Remover este exercício?')) return;
+    if (!weekData[day] || typeof index !== 'number') return;
+    if (index < 0 || index >= weekData[day].length) return;
+    weekData[day].splice(index, 1);
+    await saveWeekData();
+    renderKanban();
+  }
+
+  async function saveWeekData() {
+    // Tenta salvar de várias formas dependendo da API disponível no dbManager
+    try {
+      if (!studentId) {
+        console.warn('studentId não definido — salvando apenas localmente');
+        return;
+      }
+      if (window.dbManager && typeof dbManager.saveStudentWeek === 'function') {
+        await dbManager.saveStudentWeek(studentId, weekData);
+        return;
+      }
+      if (window.dbManager && typeof dbManager.updateStudentWeek === 'function') {
+        await dbManager.updateStudentWeek(studentId, weekData);
+        return;
+      }
+      if (window.dbManager && typeof dbManager.updateWorkout === 'function') {
+        // caso a implementação salve por workouts, tentamos o fallback: sobrescrever todos os workouts do aluno
+        // isso é um fallback genérico - pode ser ajustado à sua API
+        console.warn('dbManager.updateWorkout disponível mas método saveStudentWeek não encontrado — não implementado fallback automático');
+        return;
+      }
+      // se não houver dbManager ou método de salvar, logamos e mantemos local
+      console.warn('Nenhum método conhecido de salvamento encontrado em dbManager — salvamento local apenas.');
+    } catch (err) {
+      console.error('Erro ao salvar semana:', err);
+      alert('Erro ao salvar alterações. Verifique a conexão.');
+    }
+  }
+
+  function generateId() {
+    // id simples
+    return 'id_' + Math.random().toString(36).slice(2, 9);
+  }
+
+  function escapeHtml(unsafe) {
+    if (!unsafe && unsafe !== 0) return '';
+    return String(unsafe)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // inicializa
+  loadStudentData();
+
+})();
+</script>

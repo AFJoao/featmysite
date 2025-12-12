@@ -1,69 +1,290 @@
 <div class="create-workout-page">
-  <header>
-    <h1>Criar Treino</h1>
-    <nav>
-      <a href="#/personal/dashboard">Dashboard</a>
-      <a href="#/personal/exercises">Exercícios</a>
-      <a href="#" id="logoutBtn">Sair</a>
-    </nav>
-  </header>
+  <style>
+    .header { 
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); 
+      padding: 20px 40px; 
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+      position: sticky; 
+      top: 0; 
+      z-index: 100; 
+    }
+    .header-content { 
+      max-width: 1400px; 
+      margin: 0 auto; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+    }
+    .header-left { display: flex; align-items: center; gap: 15px; }
+    .header-left svg { width: 32px; height: 32px; stroke: #fff; }
+    .header-left h1 { color: #fff; font-size: 24px; font-weight: 600; margin: 0; }
+    .header-nav { display: flex; gap: 10px; }
+    .btn { 
+      background: transparent; 
+      color: #fff; 
+      border: 1px solid rgba(255,255,255,0.3); 
+      padding: 10px 20px; 
+      border-radius: 6px; 
+      cursor: pointer; 
+      transition: all 0.3s; 
+      display: flex; 
+      align-items: center; 
+      gap: 8px; 
+      font-size: 14px; 
+      text-decoration: none;
+    }
+    .btn:hover { background: rgba(255,255,255,0.1); border-color: #fff; }
+    
+    .container { max-width: 1400px; margin: 0 auto; padding: 30px 20px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    
+    .section { 
+      background: #fff; 
+      border: 1px solid #e0e0e0; 
+      border-radius: 12px; 
+      padding: 25px; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+    }
+    .section h2 { font-size: 22px; font-weight: 600; margin-bottom: 20px; }
+    
+    .form-group { margin-bottom: 20px; }
+    .form-group label { 
+      display: block; 
+      margin-bottom: 8px; 
+      font-weight: 600; 
+      font-size: 14px; 
+    }
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%; 
+      padding: 12px 16px; 
+      border: 1px solid #e0e0e0; 
+      border-radius: 8px; 
+      font-family: inherit; 
+      font-size: 15px; 
+      transition: all 0.3s; 
+    }
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none; 
+      border-color: #000; 
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.05); 
+    }
+    .form-group textarea { resize: vertical; min-height: 100px; }
+    
+    .days-grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); 
+      gap: 10px; 
+      margin-bottom: 20px; 
+    }
+    .day-box { 
+      background: #fff; 
+      border: 2px solid #e0e0e0; 
+      padding: 15px; 
+      text-align: center; 
+      cursor: pointer; 
+      transition: all 0.3s; 
+      border-radius: 8px; 
+      font-weight: 600; 
+      font-size: 14px; 
+    }
+    .day-box:hover { border-color: #000; transform: translateY(-2px); }
+    .day-box.selected { background: #000; color: #fff; border-color: #000; }
+    
+    .exercises-list { max-height: 400px; overflow-y: auto; }
+    .exercise-item { 
+      background: #f8f8f8; 
+      border: 1px solid #e0e0e0; 
+      border-radius: 8px; 
+      padding: 15px; 
+      margin-bottom: 10px; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      transition: all 0.3s; 
+    }
+    .exercise-item:hover { border-color: #000; }
+    .exercise-item h4 { font-size: 16px; font-weight: 600; margin: 0 0 5px 0; }
+    .exercise-item p { font-size: 13px; color: #666; margin: 0; }
+    
+    .btn-primary { 
+      background: #000; 
+      color: #fff; 
+      border: none; 
+      padding: 12px 24px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      font-size: 15px; 
+      font-weight: 600; 
+      transition: all 0.3s; 
+      width: 100%; 
+      margin-top: 10px; 
+    }
+    .btn-primary:hover { background: #2d2d2d; transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .btn-secondary { 
+      background: #fff; 
+      color: #000; 
+      border: 2px solid #000; 
+      padding: 8px 16px; 
+      border-radius: 6px; 
+      cursor: pointer; 
+      font-size: 13px; 
+      font-weight: 600; 
+      transition: all 0.3s; 
+    }
+    .btn-secondary:hover { background: #f5f5f5; }
+    
+    .alert { 
+      padding: 16px 20px; 
+      margin: 0 0 20px 0; 
+      border-radius: 8px; 
+      font-size: 14px; 
+    }
+    .alert.error { background: #fff3f3; border: 1px solid #ffdddd; color: #cc0000; }
+    .alert.success { background: #f0fff4; border: 1px solid #c6f6d5; color: #22543d; }
+    
+    .preview-box { 
+      background: #f8f8f8; 
+      border: 2px solid #000; 
+      border-radius: 10px; 
+      padding: 20px; 
+      min-height: 400px; 
+    }
+    .preview-box h3 { font-size: 20px; font-weight: 600; margin-bottom: 15px; }
+    .preview-day { 
+      margin: 15px 0; 
+      padding: 15px; 
+      border-left: 3px solid #000; 
+      background: #fff; 
+      border-radius: 6px; 
+    }
+    .preview-day strong { display: block; margin-bottom: 10px; font-size: 16px; }
+    .preview-day ul { margin: 5px 0; padding-left: 20px; }
+    .preview-day li { margin: 5px 0; font-size: 14px; }
+    
+    .spinner { 
+      border: 4px solid #f3f3f3; 
+      border-top: 4px solid #000; 
+      border-radius: 50%; 
+      width: 40px; 
+      height: 40px; 
+      animation: spin 1s linear infinite; 
+      margin: 0 auto; 
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    
+    .empty { text-align: center; padding: 40px 20px; color: #999; font-size: 14px; }
+    
+    @media (max-width: 1024px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+      .header { padding: 15px 20px; }
+      .header-left h1 { font-size: 20px; }
+      .header-nav { flex-wrap: wrap; }
+      .days-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
 
-  <!-- Loading inicial -->
-  <div id="pageLoading" style="text-align: center; padding: 50px;">
-    <div class="spinner" style="margin: 0 auto;"></div>
-    <p>Carregando dados...</p>
+  <div class="header">
+    <div class="header-content">
+      <div class="header-left">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+        <h1>Criar Treino</h1>
+      </div>
+      <div class="header-nav">
+        <a href="#/personal/dashboard" class="btn">Dashboard</a>
+        <a href="#/personal/exercises" class="btn">Exercícios</a>
+        <button class="btn" id="logoutBtn">Sair</button>
+      </div>
+    </div>
   </div>
 
-  <!-- Conteúdo principal (oculto inicialmente) -->
-  <div id="mainContent" style="display: none; max-width: 1200px; margin: 30px auto;">
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-      <!-- Coluna Esquerda: Formulário -->
-      <div>
-        <h2>Informações do Treino</h2>
-        
-        <div id="createError" class="alert error" style="display: none;"></div>
-        <div id="createSuccess" class="alert success" style="display: none;"></div>
+  <div id="pageLoading" style="text-align: center; padding: 80px 20px;">
+    <div class="spinner"></div>
+    <p style="color: #999; margin-top: 15px;">Carregando dados...</p>
+  </div>
 
-        <div class="form-group">
-          <label for="workoutName">Nome do Treino:</label>
-          <input type="text" id="workoutName" placeholder="Ex: Treino A - Peito" required>
+  <div id="mainContent" style="display: none;">
+    <div class="container">
+      <div class="grid-2">
+        <div>
+          <div class="section">
+            <h2>Informações do Treino</h2>
+            
+            <div id="createError" class="alert error" style="display: none;"></div>
+            <div id="createSuccess" class="alert success" style="display: none;"></div>
+
+            <div class="form-group">
+              <label for="workoutName">Nome do Treino *</label>
+              <input type="text" id="workoutName" placeholder="Ex: Treino A - Peito e Tríceps">
+            </div>
+
+            <div class="form-group">
+              <label for="workoutDescription">Descrição</label>
+              <textarea id="workoutDescription" placeholder="Descreva os objetivos e observações do treino..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="studentSelect">Aluno *</label>
+              <select id="studentSelect">
+                <option value="">-- Selecione um aluno --</option>
+              </select>
+              <small style="display: block; margin-top: 5px; color: #666;">Escolha o aluno que receberá este treino</small>
+            </div>
+          </div>
+
+          <div class="section" style="margin-top: 20px;">
+            <h2>Dias da Semana</h2>
+            <p style="font-size: 14px; color: #666; margin-bottom: 15px;">Selecione um dia e adicione exercícios abaixo</p>
+            <div class="days-grid" id="daysGrid">
+              <div class="day-box" data-day="monday">Segunda</div>
+              <div class="day-box" data-day="tuesday">Terça</div>
+              <div class="day-box" data-day="wednesday">Quarta</div>
+              <div class="day-box" data-day="thursday">Quinta</div>
+              <div class="day-box" data-day="friday">Sexta</div>
+              <div class="day-box" data-day="saturday">Sábado</div>
+              <div class="day-box" data-day="sunday">Domingo</div>
+            </div>
+            <div id="selectedDayInfo" style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px; padding: 12px; margin-top: 15px; display: none;">
+              <p style="margin: 0; font-size: 13px; color: #856404;">
+                <strong>Dia selecionado:</strong> <span id="selectedDayName"></span><br>
+                <small>Adicione exercícios usando os botões abaixo</small>
+              </p>
+            </div>
+          </div>
+
+          <div class="section" style="margin-top: 20px;">
+            <h2>Exercícios Disponíveis (<span id="exercisesCount">0</span>)</h2>
+            <div id="availableExercises" class="exercises-list">
+              <div class="empty">
+                <div class="spinner"></div>
+                <p>Carregando exercícios...</p>
+              </div>
+            </div>
+          </div>
+
+          <button id="clearSelectionBtn" class="btn-secondary" style="width: 100%; margin-top: 10px;">Limpar Seleção</button>
+          <button id="saveWorkoutBtn" class="btn-primary">Salvar Treino</button>
         </div>
 
-        <div class="form-group">
-          <label for="workoutDescription">Descrição:</label>
-          <textarea id="workoutDescription" placeholder="Descreva o treino..."></textarea>
-        </div>
-
-        <div class="form-group">
-          <label for="studentSelect">Associar a Aluno:</label>
-          <select id="studentSelect">
-            <option value="">-- Selecione um aluno (opcional) --</option>
-          </select>
-        </div>
-
-        <h3 style="margin-top: 20px;">Selecione os Dias</h3>
-        <div class="days-grid" id="daysGrid">
-          <div class="day-box" data-day="monday">Segunda</div>
-          <div class="day-box" data-day="tuesday">Terça</div>
-          <div class="day-box" data-day="wednesday">Quarta</div>
-          <div class="day-box" data-day="thursday">Quinta</div>
-          <div class="day-box" data-day="friday">Sexta</div>
-          <div class="day-box" data-day="saturday">Sábado</div>
-          <div class="day-box" data-day="sunday">Domingo</div>
-        </div>
-
-        <h3 style="margin-top: 20px;">Exercícios Disponíveis (<span id="exercisesCount">0</span>)</h3>
-        <div id="availableExercises" class="exercises-list"></div>
-
-        <button id="clearSelectionBtn" class="secondary" style="margin-top: 20px; width: 100%;">Limpar Seleção</button>
-        <button id="saveWorkoutBtn" style="margin-top: 10px; width: 100%;">Salvar Treino</button>
-      </div>
-
-      <!-- Coluna Direita: Visualização -->
-      <div>
-        <h2>Visualização do Treino</h2>
-        <div id="workoutPreview" style="border: 2px solid #000000; padding: 15px; min-height: 400px;">
-          <p style="color: #999;">A visualização aparecerá aqui...</p>
+        <div>
+          <div class="section" style="position: sticky; top: 100px;">
+            <h2>Visualização do Treino</h2>
+            <div id="workoutPreview" class="preview-box">
+              <p class="empty">A visualização aparecerá aqui...</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -74,19 +295,7 @@
 (async function() {
   console.log('=== PÁGINA CRIAR TREINO - INICIANDO ===');
 
-  // Estado global
-  const workoutState = {
-    name: '',
-    description: '',
-    studentId: '',
-    selectedDays: {},
-    dayExercises: {},
-    exercisesMap: {}
-  };
-
-  // Inicializar dias
-  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-  const dayNames = {
+  const DAYS_MAP = {
     monday: 'Segunda-feira',
     tuesday: 'Terça-feira',
     wednesday: 'Quarta-feira',
@@ -95,13 +304,18 @@
     saturday: 'Sábado',
     sunday: 'Domingo'
   };
+  const DAYS_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
-  days.forEach(day => {
-    workoutState.selectedDays[day] = false;
-    workoutState.dayExercises[day] = [];
+  const state = {
+    selectedDay: null,
+    dayExercises: {},
+    exercisesMap: {}
+  };
+
+  DAYS_ORDER.forEach(day => {
+    state.dayExercises[day] = [];
   });
 
-  // Aguardar DOM
   await new Promise(resolve => {
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', resolve);
@@ -112,31 +326,40 @@
 
   await new Promise(resolve => setTimeout(resolve, 100));
 
-  console.log('✓ DOM pronto');
+  // Logout
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await authManager.logout();
+    router.goToLogin();
+  });
 
   // Carregar alunos
   async function loadStudents() {
     try {
-      console.log('Carregando alunos...');
       const students = await dbManager.getAllStudents();
-      console.log('Alunos carregados:', students.length);
-      
       const select = document.getElementById('studentSelect');
-      if (!select) return;
       
-      students.forEach(student => {
+      // Verificar se há aluno pré-selecionado
+      const preselectedId = sessionStorage.getItem('preselectedStudentId');
+      
+      students.forEach(s => {
         const option = document.createElement('option');
-        option.value = student.uid;
-        option.textContent = student.name;
+        option.value = s.uid;
+        option.textContent = s.name;
+        if (preselectedId && s.uid === preselectedId) {
+          option.selected = true;
+        }
         select.appendChild(option);
       });
 
-      select.addEventListener('change', (e) => {
-        workoutState.studentId = e.target.value;
-        updatePreview();
-      });
+      // Limpar pré-seleção
+      sessionStorage.removeItem('preselectedStudentId');
 
-      console.log('✓ Alunos carregados');
+      select.addEventListener('change', updatePreview);
+      
+      // Se tinha pré-seleção, atualizar preview
+      if (preselectedId) {
+        updatePreview();
+      }
     } catch (error) {
       console.error('Erro ao carregar alunos:', error);
     }
@@ -145,89 +368,56 @@
   // Carregar exercícios
   async function loadExercises() {
     try {
-      console.log('=== CARREGANDO EXERCÍCIOS ===');
       const exercises = await dbManager.getPersonalExercises();
-      console.log('Exercícios retornados:', exercises.length);
-      
       const container = document.getElementById('availableExercises');
-      const countSpan = document.getElementById('exercisesCount');
+      document.getElementById('exercisesCount').textContent = exercises.length;
 
-      if (!container || !countSpan) return;
-
-      countSpan.textContent = exercises.length;
+      exercises.forEach(ex => { state.exercisesMap[ex.id] = ex; });
 
       if (exercises.length === 0) {
         container.innerHTML = `
-          <div class="card" style="background-color: #f5f5f5;">
-            <p style="margin: 0; color: #666;">
-              ⚠️ Nenhum exercício disponível.<br>
-              <a href="#/personal/exercises" style="font-weight: bold;">Criar exercício primeiro</a>
-            </p>
+          <div class="empty">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2" style="margin: 0 auto 15px; display: block;">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 1v6m0 6v6"></path>
+            </svg>
+            <p>Nenhum exercício disponível.</p>
+            <p style="font-size: 13px;"><a href="#/personal/exercises">Criar exercício primeiro</a></p>
           </div>
         `;
       } else {
-        // Armazenar exercícios no mapa
-        exercises.forEach(ex => {
-          workoutState.exercisesMap[ex.id] = ex;
-        });
-
-        container.innerHTML = exercises.map(exercise => `
-          <div class="exercise-item" style="margin: 10px 0; padding: 15px; border: 1px solid #000;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <div style="flex: 1;">
-                <h4 style="margin: 0 0 5px 0;">${exercise.name}</h4>
-                <p style="margin: 0; font-size: 12px; color: #666;">${exercise.description || 'Sem descrição'}</p>
-              </div>
-              <button 
-                data-exercise-id="${exercise.id}" 
-                class="add-exercise-btn secondary"
-                style="padding: 8px 15px; white-space: nowrap;">
-                + Adicionar
-              </button>
+        container.innerHTML = exercises.map(ex => `
+          <div class="exercise-item">
+            <div style="flex: 1;">
+              <h4>${ex.name}</h4>
+              <p>${ex.description || 'Sem descrição'}</p>
             </div>
+            <button class="btn-secondary add-exercise-btn" data-exercise-id="${ex.id}">+ Adicionar</button>
           </div>
         `).join('');
 
         // Adicionar event listeners
         document.querySelectorAll('.add-exercise-btn').forEach(btn => {
           btn.addEventListener('click', () => {
-            const exerciseId = btn.getAttribute('data-exercise-id');
-            addExerciseToDay(exerciseId);
+            addExercise(btn.dataset.exerciseId);
           });
         });
-
-        console.log('✓ Exercícios renderizados');
       }
     } catch (error) {
-      console.error('❌ Erro ao carregar exercícios:', error);
-      const container = document.getElementById('availableExercises');
-      if (container) {
-        container.innerHTML = `
-          <div class="card" style="border-color: #cc0000;">
-            <p style="color: #cc0000;">
-              <strong>❌ Erro ao carregar exercícios.</strong><br>
-              ${error.message}
-            </p>
-          </div>
-        `;
-      }
+      console.error('Erro ao carregar exercícios:', error);
     }
   }
 
-  // Adicionar exercício ao dia
-  function addExerciseToDay(exerciseId) {
-    console.log('Adicionando exercício:', exerciseId);
-
-    const selectedDay = Object.keys(workoutState.selectedDays).find(day => workoutState.selectedDays[day]);
-    
-    if (!selectedDay) {
-      alert('⚠️ Selecione um dia primeiro!\n\nClique em um dos dias da semana antes de adicionar exercícios.');
+  // Adicionar exercício
+  function addExercise(exerciseId) {
+    if (!state.selectedDay) {
+      alert('⚠️ Selecione um dia primeiro!');
       return;
     }
 
-    const exercise = workoutState.exercisesMap[exerciseId];
+    const exercise = state.exercisesMap[exerciseId];
     if (!exercise) {
-      alert('❌ Erro: exercício não encontrado');
+      alert('❌ Exercício não encontrado');
       return;
     }
 
@@ -239,7 +429,7 @@
 
     const notes = prompt('Observações (opcional):', '');
 
-    workoutState.dayExercises[selectedDay].push({
+    state.dayExercises[state.selectedDay].push({
       exerciseId: exerciseId,
       exerciseName: exercise.name,
       videoUrl: exercise.videoUrl || '',
@@ -248,83 +438,84 @@
       notes: notes || ''
     });
 
-    alert('✓ Exercício adicionado!');
+    alert('✓ Exercício adicionado ao ' + DAYS_MAP[state.selectedDay]);
     updatePreview();
   }
 
   // Atualizar preview
   function updatePreview() {
     const preview = document.getElementById('workoutPreview');
-    if (!preview) return;
-
-    let html = '<h3>' + (document.getElementById('workoutName')?.value || 'Sem nome') + '</h3>';
-    
-    const descValue = document.getElementById('workoutDescription')?.value;
-    if (descValue) {
-      html += '<p><strong>Descrição:</strong> ' + descValue + '</p>';
-    }
-
+    const name = document.getElementById('workoutName').value || 'Sem nome';
+    const desc = document.getElementById('workoutDescription').value;
     const studentSelect = document.getElementById('studentSelect');
-    if (studentSelect?.value) {
-      const studentName = studentSelect.options[studentSelect.selectedIndex].text;
-      html += '<p><strong>Aluno:</strong> ' + studentName + '</p>';
-    }
+    const studentName = studentSelect.value ? studentSelect.options[studentSelect.selectedIndex].text : null;
 
-    html += '<h4 style="margin-top: 15px;">Dias e Exercícios:</h4>';
+    let html = `<h3>${name}</h3>`;
+    if (desc) html += `<p style="color: #666; margin-bottom: 15px; font-size: 14px;">${desc}</p>`;
+    if (studentName) html += `<p style="color: #666; margin-bottom: 15px; font-size: 14px;"><strong>Aluno:</strong> ${studentName}</p>`;
 
     let hasContent = false;
 
-    days.forEach(day => {
-      if (workoutState.selectedDays[day]) {
+    DAYS_ORDER.forEach(day => {
+      if (state.dayExercises[day].length > 0) {
         hasContent = true;
-        html += '<div style="margin: 10px 0; padding: 10px; border-left: 3px solid #000; background: #f9f9f9;">';
-        html += '<strong>' + dayNames[day] + '</strong>';
-        
-        if (workoutState.dayExercises[day].length === 0) {
-          html += '<p style="margin: 5px 0; font-size: 12px; color: #999;">Nenhum exercício</p>';
-        } else {
-          html += '<ul style="margin: 5px 0; padding-left: 20px;">';
-          workoutState.dayExercises[day].forEach((ex, idx) => {
-            html += '<li style="margin: 5px 0;">';
-            html += ex.exerciseName + ' - ' + ex.sets + 'x' + ex.reps;
-            if (ex.notes) html += ' <small>(' + ex.notes + ')</small>';
-            html += ' <button class="remove-exercise-btn danger" data-day="' + day + '" data-index="' + idx + '" style="padding: 2px 8px; font-size: 10px; margin-left: 5px;">✕</button>';
-            html += '</li>';
-          });
-          html += '</ul>';
-        }
+        html += '<div class="preview-day">';
+        html += `<strong>${DAYS_MAP[day]}</strong>`;
+        html += '<ul>';
+        state.dayExercises[day].forEach((ex, idx) => {
+          html += `<li>${ex.exerciseName} - ${ex.sets}x${ex.reps}`;
+          if (ex.notes) html += ` <small style="color: #666;">(${ex.notes})</small>`;
+          html += ` <button onclick="removeExercise('${day}', ${idx})" style="background: #cc0000; color: #fff; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-left: 5px;">✕</button>`;
+          html += '</li>';
+        });
+        html += '</ul>';
         html += '</div>';
       }
     });
 
     if (!hasContent) {
-      html += '<p style="color: #999; font-style: italic;">Selecione os dias e adicione exercícios...</p>';
+      html += '<p class="empty">Selecione os dias e adicione exercícios...</p>';
     }
 
     preview.innerHTML = html;
-    
-    // Event listeners para botões de remover
-    document.querySelectorAll('.remove-exercise-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const day = btn.getAttribute('data-day');
-        const index = parseInt(btn.getAttribute('data-index'));
-        workoutState.dayExercises[day].splice(index, 1);
-        updatePreview();
-      });
-    });
   }
+
+  // Remover exercício
+  window.removeExercise = function(day, index) {
+    if (confirm('Remover este exercício?')) {
+      state.dayExercises[day].splice(index, 1);
+      updatePreview();
+    }
+  };
+
+  // Seleção de dias
+  document.querySelectorAll('.day-box').forEach(box => {
+    box.addEventListener('click', () => {
+      const day = box.dataset.day;
+      
+      // Remover seleção anterior
+      document.querySelectorAll('.day-box').forEach(b => b.classList.remove('selected'));
+      
+      // Selecionar novo dia
+      box.classList.add('selected');
+      state.selectedDay = day;
+      
+      // Mostrar info do dia selecionado
+      const info = document.getElementById('selectedDayInfo');
+      const dayName = document.getElementById('selectedDayName');
+      info.style.display = 'block';
+      dayName.textContent = DAYS_MAP[day];
+    });
+  });
 
   // Salvar treino
   async function saveWorkout() {
-    console.log('=== SALVANDO TREINO ===');
-    
-    const name = document.getElementById('workoutName')?.value.trim();
-    const description = document.getElementById('workoutDescription')?.value.trim();
+    const name = document.getElementById('workoutName').value.trim();
+    const description = document.getElementById('workoutDescription').value.trim();
+    const studentId = document.getElementById('studentSelect').value;
     const errorDiv = document.getElementById('createError');
     const successDiv = document.getElementById('createSuccess');
     const saveBtn = document.getElementById('saveWorkoutBtn');
-
-    if (!errorDiv || !successDiv || !saveBtn) return;
 
     errorDiv.style.display = 'none';
     successDiv.style.display = 'none';
@@ -335,30 +526,29 @@
       return;
     }
 
-    const hasDays = Object.values(workoutState.selectedDays).some(v => v);
-    if (!hasDays) {
-      errorDiv.textContent = '❌ Selecione pelo menos um dia';
+    if (!studentId) {
+      errorDiv.textContent = '❌ Selecione um aluno';
       errorDiv.style.display = 'block';
       return;
     }
 
     let hasExercises = false;
-    days.forEach(day => {
-      if (workoutState.selectedDays[day] && workoutState.dayExercises[day].length > 0) {
+    DAYS_ORDER.forEach(day => {
+      if (state.dayExercises[day].length > 0) {
         hasExercises = true;
       }
     });
 
     if (!hasExercises) {
-      errorDiv.textContent = '❌ Adicione pelo menos um exercício';
+      errorDiv.textContent = '❌ Adicione pelo menos um exercício em algum dia';
       errorDiv.style.display = 'block';
       return;
     }
 
     const daysData = {};
-    days.forEach(day => {
-      if (workoutState.selectedDays[day]) {
-        daysData[day] = workoutState.dayExercises[day];
+    DAYS_ORDER.forEach(day => {
+      if (state.dayExercises[day].length > 0) {
+        daysData[day] = state.dayExercises[day];
       }
     });
 
@@ -366,21 +556,14 @@
     saveBtn.textContent = '⏳ Salvando...';
 
     try {
-      const result = await dbManager.createWorkout(
-        name,
-        description || '',
-        daysData,
-        document.getElementById('studentSelect')?.value || null
-      );
-
-      console.log('Resultado:', result);
+      const result = await dbManager.createWorkout(name, description, daysData, studentId);
 
       if (result.success) {
-        successDiv.innerHTML = '✓ <strong>Treino salvo!</strong><br><small>Redirecionando...</small>';
+        successDiv.innerHTML = '✓ <strong>Treino salvo com sucesso!</strong><br><small>Redirecionando...</small>';
         successDiv.style.display = 'block';
         
         setTimeout(() => {
-          router.goToPersonalDashboard();
+          router.goToStudentDetails(studentId);
         }, 1500);
       } else {
         errorDiv.textContent = '❌ ' + result.error;
@@ -389,7 +572,6 @@
         saveBtn.textContent = 'Salvar Treino';
       }
     } catch (error) {
-      console.error('Erro ao salvar:', error);
       errorDiv.textContent = '❌ Erro: ' + error.message;
       errorDiv.style.display = 'block';
       saveBtn.disabled = false;
@@ -397,60 +579,37 @@
     }
   }
 
-  // CARREGAR TUDO ANTES DE MOSTRAR
-  console.log('Carregando dados...');
-  
-  await loadStudents();
-  await loadExercises();
-  
-  console.log('✓ Dados carregados');
+  // Event listeners
+  document.getElementById('workoutName').addEventListener('input', updatePreview);
+  document.getElementById('workoutDescription').addEventListener('input', updatePreview);
 
-  // Configurar event listeners
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      await authManager.logout();
-      router.goToLogin();
-    });
-  }
-
-  // Dias
-  document.querySelectorAll('.day-box').forEach(box => {
-    box.addEventListener('click', () => {
-      const day = box.dataset.day;
-      workoutState.selectedDays[day] = !workoutState.selectedDays[day];
-      box.classList.toggle('selected');
-      updatePreview();
-    });
-  });
-
-  // Botões
-  document.getElementById('workoutName')?.addEventListener('input', updatePreview);
-  document.getElementById('workoutDescription')?.addEventListener('input', updatePreview);
-  document.getElementById('clearSelectionBtn')?.addEventListener('click', () => {
-    if (!confirm('Limpar tudo?')) return;
+  document.getElementById('clearSelectionBtn').addEventListener('click', () => {
+    if (!confirm('Limpar tudo e recomeçar?')) return;
     
-    days.forEach(day => {
-      workoutState.selectedDays[day] = false;
-      workoutState.dayExercises[day] = [];
+    DAYS_ORDER.forEach(day => {
+      state.dayExercises[day] = [];
     });
     
+    state.selectedDay = null;
     document.getElementById('workoutName').value = '';
     document.getElementById('workoutDescription').value = '';
-    document.getElementById('studentSelect').value = '';
     document.querySelectorAll('.day-box').forEach(box => box.classList.remove('selected'));
+    document.getElementById('selectedDayInfo').style.display = 'none';
     
     updatePreview();
   });
-  document.getElementById('saveWorkoutBtn')?.addEventListener('click', saveWorkout);
+
+  document.getElementById('saveWorkoutBtn').addEventListener('click', saveWorkout);
+
+  // Carregar tudo
+  await loadStudents();
+  await loadExercises();
+
+  document.getElementById('pageLoading').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'block';
 
   updatePreview();
 
-  // MOSTRAR CONTEÚDO
-  document.getElementById('pageLoading').style.display = 'none';
-  document.getElementById('mainContent').style.display = 'block';
-  
   console.log('=== PÁGINA TOTALMENTE CARREGADA ===');
 })();
 </script>
