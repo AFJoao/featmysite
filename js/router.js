@@ -1,5 +1,5 @@
 /**
- * Módulo de Roteamento
+ * Módulo de Roteamento Otimizado
  * Gerencia navegação entre páginas e proteção de rotas
  */
 
@@ -27,28 +27,29 @@ class Router {
     this.publicRoutes = ['/login', '/signup', '/'];
     this.isReady = false;
     this.authReady = false;
+    this.currentPath = null;
 
-    // Monitorar mudanças de hash
     window.addEventListener('hashchange', () => {
+      if (this.authReady) {
+        this.navigate(window.location.hash.slice(1));
+      }
+    });
+
+    window.addEventListener('popstate', () => {
       if (this.authReady) {
         this.navigate(window.location.hash.slice(1));
       }
     });
   }
 
-  /**
-   * Aguardar autenticação estar pronta
-   */
   async waitForAuth() {
     return new Promise((resolve) => {
-      // Se já está pronto, resolver imediatamente
       if (authManager.isAuthenticated() !== undefined) {
         this.authReady = true;
         resolve();
         return;
       }
 
-      // Aguardar até 3 segundos pela autenticação
       let attempts = 0;
       const checkAuth = setInterval(() => {
         attempts++;
@@ -61,64 +62,76 @@ class Router {
     });
   }
 
-  /**
-   * Navegar para uma rota
-   */
   async navigate(path = '/') {
     console.log('=== NAVEGANDO PARA:', path, '===');
 
-    // Garantir que o caminho comece com /
     if (!path.startsWith('/')) {
       path = '/' + path;
     }
 
-    // Aguardar autenticação estar pronta
     if (!this.authReady) {
       await this.waitForAuth();
     }
 
-    // Verificar se é uma rota protegida
-    if (this.protectedRoutes[path]) {
-      const requiredType = this.protectedRoutes[path];
-      
-      if (!authManager.isAuthenticated()) {
-        console.log('Usuário não autenticado, redirecionando para login');
+    const requiredType = this.protectedRoutes[path];
+    const isAuthenticated = authManager.isAuthenticated();
+    const currentUserType = authManager.getCurrentUserType();
+
+    console.log('Estado:', {
+      path,
+      requiredType,
+      isAuthenticated,
+      currentUserType
+    });
+
+    // Verificar se é rota protegida
+    if (requiredType) {
+      if (!isAuthenticated) {
+        console.log('❌ Não autenticado, redirecionando para login');
         window.location.hash = '#/login';
         return;
       }
 
-      if (authManager.getCurrentUserType() !== requiredType) {
-        console.log('Tipo incorreto, redirecionando');
-        const redirectPath = authManager.isPersonal() 
+      if (currentUserType !== requiredType) {
+        console.log('⚠️ Tipo de usuário incompatível com a rota');
+        const redirectPath = currentUserType === 'personal' 
           ? '/personal/dashboard' 
           : '/student/dashboard';
+        
+        // Só redirecionar se não estiver tentando ir para o próprio dashboard
+        if (path !== redirectPath) {
+          console.log('Redirecionando para:', redirectPath);
+          window.location.hash = '#' + redirectPath;
+          return;
+        }
+      }
+    }
+
+    // Se é rota pública e usuário está autenticado
+    if (this.publicRoutes.includes(path) && isAuthenticated) {
+      console.log('✓ Usuário já autenticado, redirecionando para dashboard');
+      const redirectPath = currentUserType === 'personal' 
+        ? '/personal/dashboard' 
+        : '/student/dashboard';
+      
+      if (path !== redirectPath) {
         window.location.hash = '#' + redirectPath;
         return;
       }
     }
 
-    // Rota pública - se usuário está autenticado, redirecionar para dashboard
-    if (this.publicRoutes.includes(path) && authManager.isAuthenticated()) {
-      console.log('Usuário já autenticado, redirecionando para dashboard');
-      const redirectPath = authManager.isPersonal() 
-        ? '/personal/dashboard' 
-        : '/student/dashboard';
-      window.location.hash = '#' + redirectPath;
-      return;
+    // Carregar página se for diferente da atual
+    if (this.currentPath !== path) {
+      await this.loadPage(path);
+      this.currentPath = path;
     }
-
-    // Carregar página
-    await this.loadPage(path);
   }
 
-  /**
-   * Carregar página via AJAX
-   */
   async loadPage(path) {
     const pagePath = this.routes[path];
     
     if (!pagePath) {
-      console.log('Rota não encontrada:', path);
+      console.log('❌ Rota não encontrada:', path);
       this.loadPage('/login');
       return;
     }
@@ -126,6 +139,7 @@ class Router {
     try {
       console.log('Carregando página:', pagePath);
       const response = await fetch(pagePath);
+      
       if (!response.ok) {
         throw new Error('Página não encontrada');
       }
@@ -133,103 +147,89 @@ class Router {
       const html = await response.text();
       const container = document.getElementById('app');
       
-      if (container) {
-        container.innerHTML = html;
-        console.log('✓ HTML carregado');
-        
-        // Aguardar um momento para o DOM atualizar
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
-        // Executar scripts da página se existirem
-        const scripts = container.querySelectorAll('script');
-        console.log('Scripts encontrados:', scripts.length);
-        
-        for (const script of scripts) {
+      if (!container) {
+        console.error('❌ Container #app não encontrado');
+        return;
+      }
+
+      container.innerHTML = html;
+      console.log('✓ HTML carregado');
+      
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      const scripts = container.querySelectorAll('script');
+      console.log('Scripts encontrados:', scripts.length);
+      
+      for (const script of scripts) {
+        try {
           const newScript = document.createElement('script');
           newScript.textContent = script.textContent;
           document.body.appendChild(newScript);
           console.log('✓ Script executado');
           
-          // Remover script após execução
           await new Promise(resolve => setTimeout(resolve, 10));
           document.body.removeChild(newScript);
+        } catch (error) {
+          console.error('Erro ao executar script:', error);
         }
-
-        console.log('✓ Página totalmente carregada');
       }
 
-      // Atualizar URL
       if (window.location.hash !== '#' + path) {
         window.location.hash = '#' + path;
       }
+
+      console.log('✓ Página totalmente carregada');
     } catch (error) {
-      console.error('Erro ao carregar página:', error);
-      document.getElementById('app').innerHTML = `
-        <div style="padding: 20px; text-align: center;">
-          <h2>Erro ao carregar página</h2>
-          <p>${error.message}</p>
-          <button onclick="window.location.reload()">Recarregar</button>
-        </div>
-      `;
+      console.error('❌ Erro ao carregar página:', error);
+      const container = document.getElementById('app');
+      if (container) {
+        container.innerHTML = `
+          <div style="max-width: 600px; margin: 100px auto; padding: 40px; text-align: center; background: #fff3f3; border: 2px solid #ffdddd; border-radius: 12px;">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#cc0000" stroke-width="2" style="margin: 0 auto 20px; display: block;">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+            <h2 style="color: #cc0000; margin-bottom: 12px;">Erro ao carregar página</h2>
+            <p style="color: #666; margin-bottom: 20px;">${error.message}</p>
+            <button onclick="window.location.reload()" style="padding: 12px 24px; background: #000000; color: #ffffff; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 600;">Recarregar</button>
+          </div>
+        `;
+      }
     }
   }
 
-  /**
-   * Ir para página de login
-   */
   goToLogin() {
     this.navigate('/login');
   }
 
-  /**
-   * Ir para página de cadastro
-   */
   goToSignup() {
     this.navigate('/signup');
   }
 
-  /**
-   * Ir para dashboard do Personal
-   */
   goToPersonalDashboard() {
     this.navigate('/personal/dashboard');
   }
 
-  /**
-   * Ir para dashboard do Aluno
-   */
   goToStudentDashboard() {
     this.navigate('/student/dashboard');
   }
 
-  /**
-   * Ir para página de criar treino
-   */
   goToCreateWorkout() {
     this.navigate('/personal/create-workout');
   }
 
-  /**
-   * Ir para página de gerenciar exercícios
-   */
   goToExercises() {
     this.navigate('/personal/exercises');
   }
 
-  /**
-   * Ir para página de visualizar treino
-   */
   goToViewWorkout() {
     this.navigate('/student/view-workout');
   }
 
-  /**
-   * Inicializar router
-   */
   async init() {
     console.log('=== INICIALIZANDO ROUTER ===');
     
-    // Aguardar autenticação estar pronta
     await this.waitForAuth();
     
     this.isReady = true;
@@ -240,13 +240,9 @@ class Router {
   }
 }
 
-// Instância global do Router
 const router = new Router();
-
-// Exportar para uso global
 window.router = router;
 
-// Inicializar roteamento quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', () => {
   console.log('DOM pronto, inicializando router...');
   router.init();

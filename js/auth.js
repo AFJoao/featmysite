@@ -9,6 +9,74 @@ class AuthManager {
     this.currentUserType = null;
     this.listeners = [];
     this.anonymousUser = null;
+    this.isInitialized = false;
+  }
+
+  /**
+   * Inicializar monitoramento de autenticação
+   */
+  initialize() {
+    if (this.isInitialized) {
+      console.log('⚠️ AuthManager já inicializado');
+      return;
+    }
+
+    console.log('🔐 Inicializando AuthManager...');
+
+    // Monitorar mudanças de autenticação
+    auth.onAuthStateChanged(async (user) => {
+      console.log('🔄 Estado de autenticação mudou:', user ? user.email : 'Não autenticado');
+      
+      // Ignorar usuários anônimos
+      if (user && user.isAnonymous) {
+        console.log('⚠️ Usuário anônimo detectado, ignorando...');
+        this.currentUser = null;
+        this.currentUserType = null;
+        this.notifyListeners();
+        return;
+      }
+
+      if (user) {
+        this.currentUser = user;
+        
+        // Buscar tipo de usuário no Firestore
+        try {
+          const userDoc = await db.collection('users').doc(user.uid).get();
+          if (userDoc.exists) {
+            this.currentUserType = userDoc.data().userType;
+            console.log('✓ Tipo de usuário:', this.currentUserType);
+          } else {
+            console.warn('⚠️ Dados do usuário não encontrados no Firestore');
+            this.currentUserType = null;
+          }
+        } catch (error) {
+          console.error('❌ Erro ao buscar tipo de usuário:', error);
+          this.currentUserType = null;
+        }
+      } else {
+        this.currentUser = null;
+        this.currentUserType = null;
+      }
+      
+      // Notificar listeners
+      this.notifyListeners();
+    });
+
+    this.isInitialized = true;
+    console.log('✓ AuthManager inicializado');
+  }
+
+  /**
+   * Notificar todos os listeners
+   */
+  notifyListeners() {
+    this.listeners.forEach(callback => {
+      try {
+        callback(this.currentUser, this.currentUserType);
+      } catch (error) {
+        console.error('❌ Erro no listener:', error);
+      }
+    });
   }
 
   /**
@@ -30,17 +98,17 @@ class AuthManager {
     try {
       // Se já está autenticado (anônimo ou não), retornar
       if (auth.currentUser) {
-        console.log('Usuário já autenticado:', auth.currentUser.uid);
+        console.log('✓ Usuário já autenticado:', auth.currentUser.uid);
         return auth.currentUser;
       }
 
-      console.log('Criando autenticação anônima temporária...');
+      console.log('⏳ Criando autenticação anônima temporária...');
       const credential = await auth.signInAnonymously();
       this.anonymousUser = credential.user;
       console.log('✓ Autenticação anônima criada:', this.anonymousUser.uid);
       return this.anonymousUser;
     } catch (error) {
-      console.error('Erro ao criar autenticação anônima:', error);
+      console.error('❌ Erro ao criar autenticação anônima:', error);
       throw error;
     }
   }
@@ -51,13 +119,14 @@ class AuthManager {
   async clearAnonymousAuth() {
     try {
       if (this.anonymousUser && auth.currentUser && auth.currentUser.isAnonymous) {
-        console.log('Removendo autenticação anônima...');
+        console.log('⏳ Removendo autenticação anônima...');
         await auth.currentUser.delete();
         this.anonymousUser = null;
         console.log('✓ Autenticação anônima removida');
       }
     } catch (error) {
-      console.error('Erro ao remover autenticação anônima:', error);
+      console.error('❌ Erro ao remover autenticação anônima:', error);
+      // Não lançar erro, pois não é crítico
     }
   }
 
@@ -71,12 +140,12 @@ class AuthManager {
       
       // Garantir autenticação anônima antes de consultar
       await this.ensureAnonymousAuth();
-      console.log('Autenticação garantida');
+      console.log('✓ Autenticação garantida');
       
       const normalizedCode = code.toUpperCase().trim();
       console.log('Código normalizado:', normalizedCode);
       
-      // Tentar buscar o Personal pelo código
+      // Buscar o Personal pelo código
       const snapshot = await db.collection('users')
         .where('referralCode', '==', normalizedCode)
         .where('userType', '==', 'personal')
@@ -84,10 +153,10 @@ class AuthManager {
       
       console.log('Query executada');
       console.log('Snapshot vazio?', snapshot.empty);
-      console.log('Número de docs encontrados:', snapshot.docs.length);
+      console.log('Número de docs:', snapshot.docs.length);
       
       if (snapshot.empty) {
-        console.log('Nenhum Personal encontrado com este código');
+        console.log('❌ Nenhum Personal encontrado com este código');
         return { 
           exists: false,
           error: 'Código não encontrado'
@@ -100,7 +169,6 @@ class AuthManager {
       console.log('✓ Personal encontrado!');
       console.log('ID:', personalDoc.id);
       console.log('Nome:', personalData.name);
-      console.log('Código:', personalData.referralCode);
       
       return {
         exists: true,
@@ -109,8 +177,6 @@ class AuthManager {
       };
     } catch (error) {
       console.error('=== ERRO AO VERIFICAR CÓDIGO ===');
-      console.error('Tipo do erro:', error.code);
-      console.error('Mensagem:', error.message);
       console.error('Erro completo:', error);
       
       return { 
@@ -126,39 +192,10 @@ class AuthManager {
   onAuthStateChanged(callback) {
     this.listeners.push(callback);
     
-    // Verificar estado atual
-    auth.onAuthStateChanged(async (user) => {
-      // Ignorar usuários anônimos
-      if (user && user.isAnonymous) {
-        console.log('Usuário anônimo detectado, ignorando...');
-        return;
-      }
-
-      if (user) {
-        this.currentUser = user;
-        // Buscar tipo de usuário no Firestore
-        try {
-          const userDoc = await db.collection('users').doc(user.uid).get();
-          if (userDoc.exists) {
-            this.currentUserType = userDoc.data().userType;
-          }
-        } catch (error) {
-          console.error('Erro ao buscar tipo de usuário:', error);
-        }
-      } else {
-        this.currentUser = null;
-        this.currentUserType = null;
-      }
-      
-      // Notificar todos os listeners
-      this.listeners.forEach(cb => {
-        try {
-          cb(this.currentUser, this.currentUserType);
-        } catch (error) {
-          console.error('Erro no listener:', error);
-        }
-      });
-    });
+    // Se já está inicializado, notificar imediatamente
+    if (this.isInitialized) {
+      callback(this.currentUser, this.currentUserType);
+    }
   }
 
   /**
@@ -192,7 +229,7 @@ class AuthManager {
           throw new Error('Código de referência do Personal é obrigatório para alunos');
         }
         
-        console.log('Verificando código do Personal...');
+        console.log('⏳ Verificando código do Personal...');
         const codeCheck = await this.checkReferralCode(referralCode);
         console.log('Resultado da verificação:', codeCheck);
         
@@ -209,7 +246,7 @@ class AuthManager {
       }
 
       // Criar usuário no Firebase Auth
-      console.log('Criando usuário no Firebase Auth...');
+      console.log('⏳ Criando usuário no Firebase Auth...');
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       const user = userCredential.user;
       console.log('✓ Usuário criado no Auth:', user.uid);
@@ -236,25 +273,22 @@ class AuthManager {
         console.log('Aluno vinculado ao Personal ID:', personalId);
       }
 
-      console.log('Salvando dados no Firestore...');
-      console.log('Dados a serem salvos:', userData);
+      console.log('⏳ Salvando dados no Firestore...');
       await db.collection('users').doc(user.uid).set(userData);
       console.log('✓ Dados salvos com sucesso!');
 
       // Se é aluno, adicionar à lista de alunos do Personal
       if (userType === 'student' && personalId) {
-        console.log('Adicionando aluno à lista do Personal...');
+        console.log('⏳ Adicionando aluno à lista do Personal...');
         
         try {
-          // Atualizar array de students do Personal
           await db.collection('users').doc(personalId).update({
             students: firebase.firestore.FieldValue.arrayUnion(user.uid)
           });
-          
           console.log('✓ Aluno adicionado à lista do Personal!');
         } catch (updateError) {
-          console.error('Erro ao atualizar lista do Personal:', updateError);
-          // Não falhar o cadastro por isso, pois o vínculo foi criado pelo personalId
+          console.error('❌ Erro ao atualizar lista do Personal:', updateError);
+          // Não falhar o cadastro por isso
         }
       }
 
@@ -298,6 +332,8 @@ class AuthManager {
    */
   async login(email, password) {
     try {
+      console.log('=== INICIANDO LOGIN ===');
+
       // Limpar qualquer autenticação anônima antes do login
       await this.clearAnonymousAuth();
 
@@ -306,11 +342,15 @@ class AuthManager {
       }
 
       // Autenticar no Firebase Auth
+      console.log('⏳ Autenticando...');
       const userCredential = await auth.signInWithEmailAndPassword(email, password);
       const user = userCredential.user;
+      console.log('✓ Autenticado:', user.email);
 
       // Buscar tipo de usuário no Firestore
+      console.log('⏳ Buscando dados do usuário...');
       const userDoc = await db.collection('users').doc(user.uid).get();
+      
       if (!userDoc.exists) {
         throw new Error('Dados do usuário não encontrados');
       }
@@ -319,13 +359,16 @@ class AuthManager {
       this.currentUser = user;
       this.currentUserType = userData.userType;
 
+      console.log('✓ Login realizado com sucesso');
+      console.log('Tipo de usuário:', this.currentUserType);
+
       return {
         success: true,
         user: user,
         userType: userData.userType
       };
     } catch (error) {
-      console.error('Erro ao fazer login:', error);
+      console.error('❌ Erro ao fazer login:', error);
       let errorMessage = error.message;
       
       // Traduzir erros comuns do Firebase
@@ -351,13 +394,15 @@ class AuthManager {
    */
   async logout() {
     try {
+      console.log('⏳ Fazendo logout...');
       await auth.signOut();
       this.currentUser = null;
       this.currentUserType = null;
       this.anonymousUser = null;
+      console.log('✓ Logout realizado');
       return { success: true };
     } catch (error) {
-      console.error('Erro ao fazer logout:', error);
+      console.error('❌ Erro ao fazer logout:', error);
       return {
         success: false,
         error: error.message
@@ -383,7 +428,7 @@ class AuthManager {
    * Verificar se usuário está autenticado
    */
   isAuthenticated() {
-    return this.currentUser !== null;
+    return this.currentUser !== null && !this.currentUser?.isAnonymous;
   }
 
   /**
@@ -403,6 +448,15 @@ class AuthManager {
 
 // Instância global do AuthManager
 const authManager = new AuthManager();
+
+// Inicializar quando o documento estiver pronto
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    authManager.initialize();
+  });
+} else {
+  authManager.initialize();
+}
 
 // Exportar para uso global
 window.authManager = authManager;

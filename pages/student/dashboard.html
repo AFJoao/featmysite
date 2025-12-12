@@ -1,26 +1,66 @@
 <div class="student-dashboard">
-  <header>
-    <h1>Aluno - Meus Treinos</h1>
-    <nav>
-      <a href="#" id="logoutBtn">Sair</a>
-    </nav>
+  <header style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); padding: 20px 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <div style="max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        <h1 style="color: #ffffff; font-size: 24px; font-weight: 600; margin: 0;">Meus Treinos</h1>
+      </div>
+      <button id="logoutBtn" style="background: transparent; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); padding: 10px 20px; border-radius: 6px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px; font-size: 14px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        Sair
+      </button>
+    </div>
   </header>
 
-  <div style="max-width: 1000px; margin: 30px auto;">
-    <h2>Bem-vindo, <span id="studentName">Carregando...</span>!</h2>
-    
-    <h3 style="margin-top: 30px; margin-bottom: 15px;">Treinos Atribuídos</h3>
-    <div id="workoutsList" class="workouts-list">
-      <div class="loading"><div class="spinner"></div><p>Carregando treinos...</p></div>
+  <div style="max-width: 1400px; margin: 0 auto; padding: 30px 20px;">
+    <div style="margin-bottom: 30px;">
+      <h2 style="font-size: 28px; font-weight: 600; margin: 0 0 8px 0;">Olá, <span id="studentName">...</span>! 👋</h2>
+      <p style="color: #666; font-size: 16px; margin: 0;">Confira seus treinos da semana</p>
+    </div>
+
+    <div id="weeklyWorkouts" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 30px;">
+      <div style="text-align: center; padding: 30px; background: #f8f8f8; border-radius: 8px;">
+        <div class="spinner" style="margin: 0 auto 15px;"></div>
+        <p style="color: #999; font-size: 14px; margin: 0;">Carregando semana...</p>
+      </div>
+    </div>
+
+    <div style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+      <h3 style="font-size: 20px; font-weight: 600; margin: 0 0 20px 0; display: flex; align-items: center; gap: 10px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+        Todos os Treinos
+      </h3>
+      <div id="workoutsList"></div>
     </div>
   </div>
 </div>
 
 <script>
 (async function() {
-  console.log('=== DASHBOARD DO ALUNO - INICIANDO ===');
+  const daysMap = {
+    monday: { name: 'Segunda', short: 'SEG' },
+    tuesday: { name: 'Terça', short: 'TER' },
+    wednesday: { name: 'Quarta', short: 'QUA' },
+    thursday: { name: 'Quinta', short: 'QUI' },
+    friday: { name: 'Sexta', short: 'SEX' },
+    saturday: { name: 'Sábado', short: 'SÁB' },
+    sunday: { name: 'Domingo', short: 'DOM' }
+  };
 
-  // Aguardar DOM
+  const daysOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
   await new Promise(resolve => {
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', resolve);
@@ -31,124 +71,304 @@
 
   await new Promise(resolve => setTimeout(resolve, 100));
 
-  console.log('✓ DOM pronto');
-
-  // Logout
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
+    logoutBtn.addEventListener('mouseover', () => {
+      logoutBtn.style.background = 'rgba(255,255,255,0.1)';
+      logoutBtn.style.borderColor = '#ffffff';
+    });
+    logoutBtn.addEventListener('mouseout', () => {
+      logoutBtn.style.background = 'transparent';
+      logoutBtn.style.borderColor = 'rgba(255,255,255,0.3)';
+    });
     logoutBtn.addEventListener('click', async (e) => {
       e.preventDefault();
-      console.log('Fazendo logout...');
       await authManager.logout();
       router.goToLogin();
     });
   }
 
-  // Mapeamento de dias
-  const daysMap = {
-    monday: 'Segunda',
-    tuesday: 'Terça',
-    wednesday: 'Quarta',
-    thursday: 'Quinta',
-    friday: 'Sexta',
-    saturday: 'Sábado',
-    sunday: 'Domingo'
-  };
-
-  // Função para visualizar treino
   window.viewWorkoutFunc = function(workoutId) {
-    console.log('Visualizando treino:', workoutId);
     sessionStorage.setItem('viewWorkoutId', workoutId);
     router.goToViewWorkout();
   };
 
-  // Carregar dados do Aluno
+  async function getWorkoutCompletion(workoutId) {
+    try {
+      const user = authManager.getCurrentUser();
+      if (!user) return { completed: 0, total: 0, percentage: 0 };
+
+      const completionDoc = await db.collection('workoutCompletions')
+        .doc(`${user.uid}_${workoutId}`)
+        .get();
+
+      if (!completionDoc.exists) {
+        return { completed: 0, total: 0, percentage: 0 };
+      }
+
+      const completedExercises = completionDoc.data().completed || {};
+      const completedCount = Object.values(completedExercises).filter(v => v === true).length;
+      
+      return {
+        completed: completedCount,
+        completedExercises: completedExercises
+      };
+    } catch (error) {
+      console.error('Erro ao obter conclusão:', error);
+      return { completed: 0, total: 0, percentage: 0 };
+    }
+  }
+
+  async function calculateWorkoutProgress(workout) {
+    if (!workout.days) return { completed: 0, total: 0, percentage: 0 };
+
+    let totalExercises = 0;
+    Object.values(workout.days).forEach(dayExercises => {
+      if (Array.isArray(dayExercises)) {
+        totalExercises += dayExercises.length;
+      }
+    });
+
+    const completion = await getWorkoutCompletion(workout.id);
+    const percentage = totalExercises > 0 ? Math.round((completion.completed / totalExercises) * 100) : 0;
+
+    return {
+      completed: completion.completed,
+      total: totalExercises,
+      percentage: percentage
+    };
+  }
+
   async function loadStudentData() {
     try {
-      console.log('Carregando dados do aluno...');
-      
       const studentNameSpan = document.getElementById('studentName');
       if (!studentNameSpan) return;
 
       const userData = await dbManager.getCurrentUserData();
-      console.log('Dados do aluno:', userData);
-      
       if (userData) {
         studentNameSpan.textContent = userData.name || 'Aluno';
       }
-
-      console.log('✓ Dados do aluno carregados');
     } catch (error) {
-      console.error('❌ Erro ao carregar dados:', error);
+      console.error('Erro ao carregar dados:', error);
     }
   }
 
-  // Carregar treinos
   async function loadWorkouts() {
     try {
-      console.log('=== CARREGANDO TREINOS DO ALUNO ===');
-      
-      const workoutsList = document.getElementById('workoutsList');
-      if (!workoutsList) return;
-
       const workouts = await dbManager.getStudentWorkouts();
-      console.log('Treinos retornados:', workouts);
-
-      if (workouts.length === 0) {
-        workoutsList.innerHTML = `
-          <div class="card" style="background-color: #f5f5f5;">
-            <p style="margin: 0; color: #666;">
-              Nenhum treino atribuído ainda.<br>
-              Aguarde seu Personal Trainer atribuir um treino a você.
-            </p>
+      const weeklyContainer = document.getElementById('weeklyWorkouts');
+      const allWorkoutsContainer = document.getElementById('workoutsList');
+      
+      if (!workouts || workouts.length === 0) {
+        weeklyContainer.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: #f8f8f8; border-radius: 12px; border: 2px dashed #ddd;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2" style="margin: 0 auto 15px; display: block;">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <p style="color: #666; font-size: 16px; margin: 0;">Nenhum treino atribuído ainda</p>
+            <p style="color: #999; font-size: 14px; margin: 5px 0 0 0;">Aguarde seu personal trainer atribuir treinos</p>
           </div>
         `;
-      } else {
-        workoutsList.innerHTML = workouts.map(workout => {
-          // Contar dias com exercícios
-          const daysWithExercises = Object.keys(workout.days || {}).filter(day => {
-            return workout.days[day] && workout.days[day].length > 0;
-          }).map(day => daysMap[day] || day);
+        allWorkoutsContainer.innerHTML = '';
+        return;
+      }
 
-          return `
-            <div class="card">
-              <h4>${workout.name}</h4>
-              <p>${workout.description || 'Sem descrição'}</p>
-              <p><strong>Dias:</strong> ${daysWithExercises.length > 0 ? daysWithExercises.join(', ') : 'Nenhum dia definido'}</p>
-              <div style="margin-top: 10px;">
-                <button 
-                  class="view-workout-btn secondary" 
-                  data-workout-id="${workout.id}"
-                  onclick="viewWorkoutFunc('${workout.id}')">
-                  👁️ Ver Treino
-                </button>
+      const weeklyWorkouts = {};
+      daysOrder.forEach(day => { weeklyWorkouts[day] = []; });
+
+      workouts.forEach(workout => {
+        if (workout.days) {
+          Object.keys(workout.days).forEach(day => {
+            if (workout.days[day] && workout.days[day].length > 0) {
+              weeklyWorkouts[day].push(workout);
+            }
+          });
+        }
+      });
+
+      let weeklyHTML = '';
+      daysOrder.forEach(day => {
+        const dayWorkouts = weeklyWorkouts[day];
+        const today = new Date().getDay();
+        const dayIndex = daysOrder.indexOf(day);
+        const adjustedDayIndex = dayIndex === 6 ? 0 : dayIndex + 1;
+        const isToday = today === adjustedDayIndex;
+
+        weeklyHTML += `
+          <div style="background: ${isToday ? 'linear-gradient(135deg, #000000 0%, #2d2d2d 100%)' : '#ffffff'}; border: ${isToday ? 'none' : '1px solid #e0e0e0'}; border-radius: 10px; padding: 20px; min-height: 180px; box-shadow: ${isToday ? '0 4px 12px rgba(0,0,0,0.15)' : '0 2px 8px rgba(0,0,0,0.05)'}; transition: all 0.3s;">
+            <div style="text-align: center; margin-bottom: 15px;">
+              <div style="font-size: 12px; font-weight: 600; color: ${isToday ? '#ffffff' : '#999'}; letter-spacing: 1px; margin-bottom: 5px;">${daysMap[day].short}</div>
+              <div style="font-size: 18px; font-weight: 600; color: ${isToday ? '#ffffff' : '#000000'};">${daysMap[day].name}</div>
+              ${isToday ? '<div style="width: 30px; height: 3px; background: #ffffff; margin: 8px auto 0; border-radius: 2px;"></div>' : ''}
+            </div>
+            <div id="day-${day}-workouts" style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="text-align: center; padding: 20px 10px;">
+                <div class="spinner" style="width: 20px; height: 20px; border-width: 2px; margin: 0 auto;"></div>
               </div>
             </div>
-          `;
-        }).join('');
-      }
-
-      console.log('✓ Treinos carregados');
-    } catch (error) {
-      console.error('❌ Erro ao carregar treinos:', error);
-      const workoutsList = document.getElementById('workoutsList');
-      if (workoutsList) {
-        workoutsList.innerHTML = `
-          <div class="card" style="border-color: #cc0000;">
-            <p style="color: #cc0000;">
-              <strong>❌ Erro ao carregar treinos.</strong><br>
-              ${error.message}
-            </p>
           </div>
         `;
+      });
+
+      weeklyContainer.innerHTML = weeklyHTML;
+
+      // Carregar progresso de cada treino
+      for (const day of daysOrder) {
+        const dayWorkouts = weeklyWorkouts[day];
+        const dayContainer = document.getElementById(`day-${day}-workouts`);
+        const today = new Date().getDay();
+        const dayIndex = daysOrder.indexOf(day);
+        const adjustedDayIndex = dayIndex === 6 ? 0 : dayIndex + 1;
+        const isToday = today === adjustedDayIndex;
+
+        if (dayWorkouts.length === 0) {
+          dayContainer.innerHTML = `
+            <div style="text-align: center; padding: 20px 10px; color: ${isToday ? 'rgba(255,255,255,0.6)' : '#999'}; font-size: 13px;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin: 0 auto 8px; display: block; opacity: 0.5;">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+              </svg>
+              Sem treino
+            </div>
+          `;
+        } else {
+          let dayHTML = '';
+          for (const w of dayWorkouts) {
+            const progress = await calculateWorkoutProgress(w);
+            const exerciseCount = (w.days[day] || []).length;
+            const muscleGroups = [...new Set((w.days[day] || []).map(e => e.muscleGroup || 'Geral'))];
+            const isCompleted = progress.percentage === 100;
+            
+            dayHTML += `
+              <div onclick="viewWorkoutFunc('${w.id}')" style="background: ${isToday ? 'rgba(255,255,255,0.1)' : (isCompleted ? 'linear-gradient(135deg, #f0fff4 0%, #dcfce7 100%)' : '#f8f8f8')}; border: 1px solid ${isToday ? 'rgba(255,255,255,0.2)' : (isCompleted ? '#86efac' : '#e8e8e8')}; border-radius: 8px; padding: 12px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;">
+                ${isCompleted ? `
+                  <div style="position: absolute; top: 8px; right: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </div>
+                ` : ''}
+                <div style="font-weight: 600; font-size: 13px; color: ${isToday ? '#ffffff' : '#000000'}; margin-bottom: 6px; line-height: 1.3; padding-right: ${isCompleted ? '25px' : '0'};">${w.name}</div>
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: ${isToday ? 'rgba(255,255,255,0.7)' : '#666'}; margin-bottom: 8px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  ${exerciseCount} exercício${exerciseCount !== 1 ? 's' : ''}
+                </div>
+                ${progress.total > 0 ? `
+                  <div style="margin-top: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                      <span style="font-size: 10px; color: ${isToday ? 'rgba(255,255,255,0.7)' : '#666'}; font-weight: 600;">PROGRESSO</span>
+                      <span style="font-size: 10px; color: ${isToday ? 'rgba(255,255,255,0.9)' : '#000000'}; font-weight: 700;">${progress.percentage}%</span>
+                    </div>
+                    <div style="width: 100%; height: 6px; background: ${isToday ? 'rgba(255,255,255,0.2)' : '#e5e7eb'}; border-radius: 3px; overflow: hidden;">
+                      <div style="width: ${progress.percentage}%; height: 100%; background: ${isCompleted ? '#22c55e' : (isToday ? '#ffffff' : '#000000')}; transition: width 0.3s; border-radius: 3px;"></div>
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
+            `;
+          }
+          dayContainer.innerHTML = dayHTML;
+        }
       }
+
+      allWorkoutsContainer.innerHTML = workouts.map(workout => {
+        const daysWithExercises = Object.keys(workout.days || {}).filter(day => 
+          workout.days[day] && workout.days[day].length > 0
+        ).map(day => daysMap[day].name);
+
+        const totalExercises = Object.values(workout.days || {}).reduce((sum, dayEx) => sum + (dayEx?.length || 0), 0);
+
+        return `
+          <div id="workout-card-${workout.id}" style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 20px; margin-bottom: 15px; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.03); position: relative;" onclick="viewWorkoutFunc('${workout.id}')" onmouseover="this.style.borderColor='#000000'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';" onmouseout="this.style.borderColor='#e0e0e0'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.03)';">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+              <h4 style="font-size: 18px; font-weight: 600; margin: 0; color: #000000; flex: 1;">${workout.name}</h4>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </div>
+            ${workout.description ? `<p style="color: #666; font-size: 14px; margin: 0 0 12px 0; line-height: 1.5;">${workout.description}</p>` : ''}
+            <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #666;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                ${daysWithExercises.join(', ')}
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #666;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                ${totalExercises} exercícios
+              </div>
+            </div>
+            <div id="progress-${workout.id}" style="margin-top: 12px;">
+              <div style="text-align: center; padding: 8px;">
+                <div class="spinner" style="width: 16px; height: 16px; border-width: 2px; margin: 0 auto;"></div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Carregar progresso de cada treino na lista completa
+      for (const workout of workouts) {
+        const progress = await calculateWorkoutProgress(workout);
+        const progressDiv = document.getElementById(`progress-${workout.id}`);
+        const workoutCard = document.getElementById(`workout-card-${workout.id}`);
+        
+        if (progressDiv) {
+          const isCompleted = progress.percentage === 100;
+          
+          if (isCompleted && workoutCard) {
+            workoutCard.style.background = 'linear-gradient(135deg, #f0fff4 0%, #dcfce7 100%)';
+            workoutCard.style.borderColor = '#86efac';
+          }
+          
+          progressDiv.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-size: 12px; color: #666; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                ${isCompleted ? `
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                ` : ''}
+                PROGRESSO
+              </span>
+              <span style="font-size: 12px; color: ${isCompleted ? '#22c55e' : '#000000'}; font-weight: 700;">${progress.completed}/${progress.total} (${progress.percentage}%)</span>
+            </div>
+            <div style="width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">
+              <div style="width: ${progress.percentage}%; height: 100%; background: ${isCompleted ? '#22c55e' : '#000000'}; transition: width 0.5s; border-radius: 4px;"></div>
+            </div>
+          `;
+        }
+      }
+
+    } catch (error) {
+      console.error('Erro ao carregar treinos:', error);
+      document.getElementById('weeklyWorkouts').innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: #fff3f3; border-radius: 12px; border: 2px solid #ffdddd;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cc0000" stroke-width="2" style="margin: 0 auto 15px; display: block;">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <p style="color: #cc0000; font-size: 16px; margin: 0;">Erro ao carregar treinos</p>
+        </div>
+      `;
     }
   }
 
-  // Carregar tudo
   await loadStudentData();
   await loadWorkouts();
-
-  console.log('=== DASHBOARD DO ALUNO CARREGADO ===');
 })();
 </script>
