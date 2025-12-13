@@ -339,7 +339,6 @@
       const students = await dbManager.getAllStudents();
       const select = document.getElementById('studentSelect');
       
-      // Verificar se há aluno pré-selecionado
       const preselectedId = sessionStorage.getItem('preselectedStudentId');
       
       students.forEach(s => {
@@ -352,12 +351,10 @@
         select.appendChild(option);
       });
 
-      // Limpar pré-seleção
       sessionStorage.removeItem('preselectedStudentId');
 
       select.addEventListener('change', updatePreview);
       
-      // Se tinha pré-seleção, atualizar preview
       if (preselectedId) {
         updatePreview();
       }
@@ -397,7 +394,6 @@
           </div>
         `).join('');
 
-        // Adicionar event listeners
         document.querySelectorAll('.add-exercise-btn').forEach(btn => {
           btn.addEventListener('click', () => {
             addExercise(btn.dataset.exerciseId);
@@ -409,7 +405,7 @@
     }
   }
 
-  // Adicionar exercício
+  // Adicionar exercício (ATUALIZADO - adicionado campo "carga")
   function addExercise(exerciseId) {
     if (!state.selectedDay) {
       alert('⚠️ Selecione um dia primeiro!');
@@ -428,6 +424,9 @@
     const reps = prompt('Quantas repetições?', '10');
     if (reps === null) return;
 
+    const weight = prompt('Qual a carga? (Ex: 20kg, Peso corporal, etc)', '');
+    if (weight === null) return;
+
     const notes = prompt('Observações (opcional):', '');
 
     state.dayExercises[state.selectedDay].push({
@@ -436,6 +435,7 @@
       videoUrl: exercise.videoUrl || '',
       sets: sets,
       reps: reps,
+      weight: weight || '',
       notes: notes || ''
     });
 
@@ -443,7 +443,7 @@
     updatePreview();
   }
 
-  // Atualizar preview
+  // Atualizar preview (ATUALIZADO - exibe campo "carga")
   function updatePreview() {
     const preview = document.getElementById('workoutPreview');
     const name = document.getElementById('workoutName').value || 'Sem nome';
@@ -465,7 +465,8 @@
         html += '<ul>';
         state.dayExercises[day].forEach((ex, idx) => {
           html += `<li>${ex.exerciseName} - ${ex.sets}x${ex.reps}`;
-          if (ex.notes) html += ` <small style="color: #666;">(${ex.notes})</small>`;
+          if (ex.weight) html += ` <small style="color: #666;">(${ex.weight})</small>`;
+          if (ex.notes) html += ` <small style="color: #666; font-style: italic;">(${ex.notes})</small>`;
           html += ` <button onclick="removeExercise('${day}', ${idx})" style="background: #cc0000; color: #fff; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-left: 5px;">✕</button>`;
           html += '</li>';
         });
@@ -494,14 +495,11 @@
     box.addEventListener('click', () => {
       const day = box.dataset.day;
       
-      // Remover seleção anterior
       document.querySelectorAll('.day-box').forEach(b => b.classList.remove('selected'));
       
-      // Selecionar novo dia
       box.classList.add('selected');
       state.selectedDay = day;
       
-      // Mostrar info do dia selecionado
       const info = document.getElementById('selectedDayInfo');
       const dayName = document.getElementById('selectedDayName');
       info.style.display = 'block';
