@@ -1,5 +1,5 @@
 /**
- * Módulo de Autenticação
+ * Módulo de Autenticação - CORRIGIDO
  * Gerencia cadastro, login, logout e persistência de sessão
  */
 
@@ -10,60 +10,110 @@ class AuthManager {
     this.listeners = [];
     this.anonymousUser = null;
     this.isInitialized = false;
+    this.authStateUnsubscribe = null;
+    this.initializationPromise = null;
   }
 
   /**
    * Inicializar monitoramento de autenticação
    */
   initialize() {
+    // Se já está inicializando, retorna a promise existente
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    // Se já foi inicializado, retorna promise resolvida
     if (this.isInitialized) {
       console.log('⚠️ AuthManager já inicializado');
-      return;
+      return Promise.resolve();
     }
 
     console.log('🔐 Inicializando AuthManager...');
 
-    // Monitorar mudanças de autenticação
-    auth.onAuthStateChanged(async (user) => {
-      console.log('🔄 Estado de autenticação mudou:', user ? user.email : 'Não autenticado');
-      
-      // Ignorar usuários anônimos
-      if (user && user.isAnonymous) {
-        console.log('⚠️ Usuário anônimo detectado, ignorando...');
-        this.currentUser = null;
-        this.currentUserType = null;
-        this.notifyListeners();
-        return;
+    this.initializationPromise = new Promise((resolve) => {
+      // Limpar listener anterior se existir
+      if (this.authStateUnsubscribe) {
+        this.authStateUnsubscribe();
       }
 
-      if (user) {
-        this.currentUser = user;
+      // Flag para garantir que resolve só acontece uma vez
+      let resolved = false;
+
+      // Monitorar mudanças de autenticação
+      this.authStateUnsubscribe = auth.onAuthStateChanged(async (user) => {
+        console.log('🔄 Estado de autenticação mudou:', user ? user.email : 'Não autenticado');
         
-        // Buscar tipo de usuário no Firestore
-        try {
-          const userDoc = await db.collection('users').doc(user.uid).get();
-          if (userDoc.exists) {
-            this.currentUserType = userDoc.data().userType;
-            console.log('✓ Tipo de usuário:', this.currentUserType);
-          } else {
-            console.warn('⚠️ Dados do usuário não encontrados no Firestore');
+        // Ignorar usuários anônimos
+        if (user && user.isAnonymous) {
+          console.log('⚠️ Usuário anônimo detectado, ignorando...');
+          this.currentUser = null;
+          this.currentUserType = null;
+          this.notifyListeners();
+          
+          if (!resolved) {
+            resolved = true;
+            this.isInitialized = true;
+            resolve();
+          }
+          return;
+        }
+
+        if (user) {
+          this.currentUser = user;
+          
+          // Buscar tipo de usuário no Firestore
+          try {
+            const userDoc = await db.collection('users').doc(user.uid).get();
+            if (userDoc.exists) {
+              this.currentUserType = userDoc.data().userType;
+              console.log('✓ Tipo de usuário:', this.currentUserType);
+            } else {
+              console.warn('⚠️ Dados do usuário não encontrados no Firestore');
+              this.currentUserType = null;
+            }
+          } catch (error) {
+            console.error('❌ Erro ao buscar tipo de usuário:', error);
             this.currentUserType = null;
           }
-        } catch (error) {
-          console.error('❌ Erro ao buscar tipo de usuário:', error);
+        } else {
+          this.currentUser = null;
           this.currentUserType = null;
         }
-      } else {
-        this.currentUser = null;
-        this.currentUserType = null;
-      }
-      
-      // Notificar listeners
-      this.notifyListeners();
+        
+        // Notificar listeners
+        this.notifyListeners();
+
+        // Resolver a promise de inicialização apenas na primeira vez
+        if (!resolved) {
+          resolved = true;
+          this.isInitialized = true;
+          console.log('✓ AuthManager inicializado');
+          resolve();
+        }
+      });
     });
 
-    this.isInitialized = true;
-    console.log('✓ AuthManager inicializado');
+    return this.initializationPromise;
+  }
+
+  /**
+   * Reinicializar o AuthManager (útil após logout)
+   */
+  async reinitialize() {
+    console.log('🔄 Reinicializando AuthManager...');
+    
+    // Marcar como não inicializado
+    this.isInitialized = false;
+    this.initializationPromise = null;
+    
+    // Aguardar um pouco para garantir que o Firebase processou o signOut
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Inicializar novamente
+    await this.initialize();
+    
+    console.log('✓ Reinicialização concluída');
   }
 
   /**
@@ -380,6 +430,10 @@ class AuthManager {
         errorMessage = 'Email inválido';
       } else if (error.code === 'auth/user-disabled') {
         errorMessage = 'Usuário desabilitado';
+      } else if (error.code === 'auth/invalid-credential') {
+        errorMessage = 'Email ou senha incorretos';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Muitas tentativas. Tente novamente mais tarde';
       }
       
       return {
@@ -395,14 +449,31 @@ class AuthManager {
   async logout() {
     try {
       console.log('⏳ Fazendo logout...');
-      await auth.signOut();
+      
+      // Limpar estado local ANTES do signOut
       this.currentUser = null;
       this.currentUserType = null;
       this.anonymousUser = null;
+      
+      // Fazer logout no Firebase
+      await auth.signOut();
+      
+      // Aguardar propagação do estado
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Reinicializar para limpar o estado completamente
+      await this.reinitialize();
+      
       console.log('✓ Logout realizado');
       return { success: true };
     } catch (error) {
       console.error('❌ Erro ao fazer logout:', error);
+      
+      // Mesmo com erro, limpar estado local
+      this.currentUser = null;
+      this.currentUserType = null;
+      this.anonymousUser = null;
+      
       return {
         success: false,
         error: error.message
@@ -444,6 +515,17 @@ class AuthManager {
   isStudent() {
     return this.currentUserType === 'student';
   }
+
+  /**
+   * Cleanup - remover listeners
+   */
+  cleanup() {
+    if (this.authStateUnsubscribe) {
+      this.authStateUnsubscribe();
+      this.authStateUnsubscribe = null;
+    }
+    this.listeners = [];
+  }
 }
 
 // Instância global do AuthManager
@@ -451,8 +533,8 @@ const authManager = new AuthManager();
 
 // Inicializar quando o documento estiver pronto
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    authManager.initialize();
+  document.addEventListener('DOMContentLoaded', async () => {
+    await authManager.initialize();
   });
 } else {
   authManager.initialize();

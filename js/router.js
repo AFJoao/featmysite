@@ -1,5 +1,5 @@
 /**
- * Módulo de Roteamento Otimizado
+ * Módulo de Roteamento Otimizado - CORRIGIDO
  * Gerencia navegação entre páginas e proteção de rotas
  */
 
@@ -30,6 +30,8 @@ class Router {
     this.isReady = false;
     this.authReady = false;
     this.currentPath = null;
+    this.navigationQueue = [];
+    this.isNavigating = false;
 
     window.addEventListener('hashchange', () => {
       if (this.authReady) {
@@ -45,22 +47,34 @@ class Router {
   }
 
   async waitForAuth() {
+    console.log('⏳ Aguardando inicialização do AuthManager...');
+    
     return new Promise((resolve) => {
-      if (authManager.isAuthenticated() !== undefined) {
+      // Se o AuthManager já está inicializado
+      if (authManager.isInitialized) {
+        console.log('✓ AuthManager já inicializado');
         this.authReady = true;
         resolve();
         return;
       }
 
-      let attempts = 0;
-      const checkAuth = setInterval(() => {
-        attempts++;
-        if (authManager.isAuthenticated() !== undefined || attempts > 30) {
-          clearInterval(checkAuth);
+      // Esperar pela inicialização
+      const checkInterval = setInterval(() => {
+        if (authManager.isInitialized) {
+          clearInterval(checkInterval);
+          console.log('✓ AuthManager inicializado');
           this.authReady = true;
           resolve();
         }
-      }, 100);
+      }, 50);
+
+      // Timeout de segurança (10 segundos)
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        console.warn('⚠️ Timeout aguardando AuthManager - prosseguindo mesmo assim');
+        this.authReady = true;
+        resolve();
+      }, 10000);
     });
   }
 
@@ -129,66 +143,102 @@ class Router {
   }
 
   async navigate(path = '/') {
-    console.log('=== NAVEGANDO PARA:', path, '===');
-
-    if (!path.startsWith('/')) {
-      path = '/' + path;
+    // Se já está navegando para o mesmo path, ignorar
+    if (this.isNavigating && this.currentPath === path) {
+      console.log('⏳ Já navegando para:', path);
+      return;
     }
 
-    if (!this.authReady) {
-      await this.waitForAuth();
+    // Adicionar à fila de navegação apenas se for diferente
+    if (this.navigationQueue.length === 0 || this.navigationQueue[this.navigationQueue.length - 1] !== path) {
+      this.navigationQueue.push(path);
     }
 
-    const requiredType = this.getRequiredType(path);
-    const isAuthenticated = authManager.isAuthenticated();
-    const currentUserType = authManager.getCurrentUserType();
+    // Se já está navegando, retornar (será processado depois)
+    if (this.isNavigating) {
+      console.log('⏳ Navegação em andamento, adicionando à fila:', path);
+      return;
+    }
 
-    console.log('Estado:', {
-      path,
-      requiredType,
-      isAuthenticated,
-      currentUserType
-    });
+    // Processar fila
+    while (this.navigationQueue.length > 0) {
+      const nextPath = this.navigationQueue.shift();
+      await this._navigate(nextPath);
+    }
+  }
 
-    // Verificar se é rota protegida
-    if (requiredType) {
-      if (!isAuthenticated) {
-        console.log('❌ Não autenticado, redirecionando para login');
-        window.location.hash = '#/login';
-        return;
+  async _navigate(path = '/') {
+    this.isNavigating = true;
+
+    try {
+      console.log('=== NAVEGANDO PARA:', path, '===');
+
+      if (!path.startsWith('/')) {
+        path = '/' + path;
       }
 
-      if (currentUserType !== requiredType) {
-        console.log('⚠️ Tipo de usuário incompatível com a rota');
+      if (!this.authReady) {
+        await this.waitForAuth();
+      }
+
+      const requiredType = this.getRequiredType(path);
+      const isAuthenticated = authManager.isAuthenticated();
+      const currentUserType = authManager.getCurrentUserType();
+
+      console.log('Estado:', {
+        path,
+        requiredType,
+        isAuthenticated,
+        currentUserType
+      });
+
+      // Verificar se é rota protegida
+      if (requiredType) {
+        if (!isAuthenticated) {
+          console.log('❌ Não autenticado, redirecionando para login');
+          window.location.hash = '#/login';
+          this.isNavigating = false;
+          return;
+        }
+
+        if (currentUserType !== requiredType) {
+          console.log('⚠️ Tipo de usuário incompatível com a rota');
+          const redirectPath = currentUserType === 'personal' 
+            ? '/personal/dashboard' 
+            : '/student/dashboard';
+          
+          if (path !== redirectPath) {
+            console.log('Redirecionando para:', redirectPath);
+            window.location.hash = '#' + redirectPath;
+            this.isNavigating = false;
+            return;
+          }
+        }
+      }
+
+      // Se é rota pública e usuário está autenticado
+      if (this.publicRoutes.includes(path) && isAuthenticated) {
+        console.log('✓ Usuário já autenticado, redirecionando para dashboard');
         const redirectPath = currentUserType === 'personal' 
           ? '/personal/dashboard' 
           : '/student/dashboard';
         
         if (path !== redirectPath) {
-          console.log('Redirecionando para:', redirectPath);
           window.location.hash = '#' + redirectPath;
+          this.isNavigating = false;
           return;
         }
       }
-    }
 
-    // Se é rota pública e usuário está autenticado
-    if (this.publicRoutes.includes(path) && isAuthenticated) {
-      console.log('✓ Usuário já autenticado, redirecionando para dashboard');
-      const redirectPath = currentUserType === 'personal' 
-        ? '/personal/dashboard' 
-        : '/student/dashboard';
-      
-      if (path !== redirectPath) {
-        window.location.hash = '#' + redirectPath;
-        return;
+      // Carregar página se for diferente da atual
+      if (this.currentPath !== path) {
+        await this.loadPage(path);
+        this.currentPath = path;
       }
-    }
-
-    // Carregar página se for diferente da atual
-    if (this.currentPath !== path) {
-      await this.loadPage(path);
-      this.currentPath = path;
+    } catch (error) {
+      console.error('Erro durante navegação:', error);
+    } finally {
+      this.isNavigating = false;
     }
   }
 
@@ -222,23 +272,31 @@ class Router {
         return;
       }
 
+      // Limpar completamente o container (remove event listeners também)
+      container.innerHTML = '';
+      container.textContent = '';
+      
+      // Aguardar limpeza
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Inserir novo HTML
       container.innerHTML = html;
       console.log('✓ HTML carregado');
       
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       const scripts = container.querySelectorAll('script');
       console.log('Scripts encontrados:', scripts.length);
       
+      // Executar scripts em um escopo isolado
       for (const script of scripts) {
         try {
-          const newScript = document.createElement('script');
-          newScript.textContent = script.textContent;
-          document.body.appendChild(newScript);
+          // Criar função anônima para isolar escopo
+          const scriptFunction = new Function(script.textContent);
+          scriptFunction();
           console.log('✓ Script executado');
           
           await new Promise(resolve => setTimeout(resolve, 10));
-          document.body.removeChild(newScript);
         } catch (error) {
           console.error('Erro ao executar script:', error);
         }
@@ -308,6 +366,7 @@ class Router {
   async init() {
     console.log('=== INICIALIZANDO ROUTER ===');
     
+    // Aguardar AuthManager estar pronto
     await this.waitForAuth();
     
     this.isReady = true;
