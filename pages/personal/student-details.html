@@ -1,492 +1,7 @@
 <!-- Kanban de treinos com campo "carga" -->
 <div class="student-details-page">
   <link rel="stylesheet" href="css/mobile-responsive-fixes.css">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    .header { 
-      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); 
-      padding: 20px 40px; 
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-    }
-    .header-content { 
-      max-width: 100%; 
-      margin: 0 auto; 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
-    }
-    .back-btn {
-      background: rgba(255,255,255,0.1);
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.3);
-      padding: 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      transition: all 0.3s;
-    }
-    .back-btn:hover {
-      background: rgba(255,255,255,0.2);
-      border-color: #fff;
-    }
-    .student-info h1 {
-      color: #fff;
-      font-size: 24px;
-      font-weight: 600;
-      margin: 0 0 5px 0;
-    }
-    .student-info p {
-      color: rgba(255,255,255,0.7);
-      font-size: 14px;
-      margin: 0;
-    }
-    .logout-btn {
-      background: transparent;
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.3);
-      padding: 10px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.3s;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 14px;
-    }
-    .logout-btn:hover {
-      background: rgba(255,255,255,0.1);
-      border-color: #fff;
-    }
-    .main-content {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 30px 20px;
-    }
-    .page-title {
-      margin-bottom: 25px;
-    }
-    .page-title h2 {
-      font-size: 28px;
-      font-weight: 600;
-      color: #000;
-      margin: 0 0 8px 0;
-    }
-    .page-title p {
-      font-size: 16px;
-      color: #666;
-      margin: 0;
-    }
-    .kanban-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 15px;
-    }
-    .day-column {
-      background: #fff;
-      border-radius: 10px;
-      border: 1px solid #e0e0e0;
-      min-height: 400px;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      transition: all 0.3s;
-    }
-    .day-column.today {
-      background: linear-gradient(135deg, #000000 0%, #2d2d2d 100%);
-      border: none;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-    .day-header {
-      padding: 15px;
-      border-bottom: 1px solid rgba(0,0,0,0.05);
-      text-align: center;
-    }
-    .day-column.today .day-header {
-      border-bottom-color: rgba(255,255,255,0.1);
-    }
-    .day-short {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 1px;
-      color: #999;
-      margin-bottom: 4px;
-    }
-    .day-column.today .day-short {
-      color: rgba(255,255,255,0.7);
-    }
-    .day-name {
-      font-size: 16px;
-      font-weight: 600;
-      color: #000;
-    }
-    .day-column.today .day-name {
-      color: #fff;
-    }
-    .day-indicator {
-      width: 30px;
-      height: 3px;
-      background: #fff;
-      margin: 8px auto 0;
-      border-radius: 2px;
-    }
-    .exercise-count {
-      display: inline-block;
-      background: rgba(0,0,0,0.05);
-      color: #666;
-      padding: 3px 8px;
-      border-radius: 10px;
-      font-size: 11px;
-      font-weight: 700;
-      margin-top: 6px;
-    }
-    .day-column.today .exercise-count {
-      background: rgba(255,255,255,0.2);
-      color: #fff;
-    }
-    .day-body {
-      flex: 1;
-      padding: 12px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .day-body::-webkit-scrollbar {
-      width: 6px;
-    }
-    .day-body::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    .day-body::-webkit-scrollbar-thumb {
-      background: rgba(0,0,0,0.1);
-      border-radius: 3px;
-    }
-    .exercise-card {
-      background: #f8f8f8;
-      border: 2px solid #e8e8e8;
-      border-radius: 8px;
-      padding: 12px;
-      transition: all 0.2s;
-      cursor: move;
-      position: relative;
-    }
-    .exercise-card:hover {
-      border-color: #000;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      background: #fff;
-    }
-    .day-column.today .exercise-card {
-      background: rgba(255,255,255,0.1);
-      border-color: rgba(255,255,255,0.2);
-    }
-    .day-column.today .exercise-card:hover {
-      background: rgba(255,255,255,0.15);
-      border-color: rgba(255,255,255,0.4);
-    }
-    .drag-handle {
-      position: absolute;
-      left: 8px;
-      top: 50%;
-      transform: translateY(-50%);
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-    .exercise-card:hover .drag-handle {
-      opacity: 0.5;
-    }
-    .exercise-name {
-      font-size: 13px;
-      font-weight: 600;
-      color: #000;
-      margin: 0 0 8px 0;
-      line-height: 1.3;
-      padding-right: 24px;
-    }
-    .day-column.today .exercise-name {
-      color: #fff;
-    }
-    .exercise-meta {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 0;
-      flex-wrap: wrap;
-    }
-    .meta-badge {
-      background: #000;
-      color: #fff;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
-    }
-    .day-column.today .meta-badge {
-      background: rgba(255,255,255,0.9);
-      color: #000;
-    }
-    .exercise-notes {
-      font-size: 11px;
-      color: #666;
-      font-style: italic;
-      margin-top: 8px;
-      padding-top: 8px;
-      border-top: 1px solid rgba(0,0,0,0.05);
-      line-height: 1.4;
-    }
-    .day-column.today .exercise-notes {
-      color: rgba(255,255,255,0.7);
-      border-top-color: rgba(255,255,255,0.1);
-    }
-    .remove-btn {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      background: #cc0000;
-      color: #fff;
-      border: none;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      cursor: pointer;
-      font-size: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s;
-      opacity: 0;
-      line-height: 1;
-    }
-    .exercise-card:hover .remove-btn {
-      opacity: 1;
-    }
-    .remove-btn:hover {
-      background: #ff0000;
-      transform: scale(1.1);
-    }
-    .add-btn {
-      background: #000;
-      color: #fff;
-      border: none;
-      padding: 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      transition: all 0.2s;
-      margin-top: auto;
-    }
-    .add-btn:hover {
-      background: #2d2d2d;
-      transform: translateY(-1px);
-    }
-    .day-column.today .add-btn {
-      background: rgba(255,255,255,0.2);
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.3);
-    }
-    .day-column.today .add-btn:hover {
-      background: rgba(255,255,255,0.3);
-      border-color: rgba(255,255,255,0.5);
-    }
-    .empty-state {
-      text-align: center;
-      padding: 30px 15px;
-      color: #999;
-      font-size: 12px;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-    .day-column.today .empty-state {
-      color: rgba(255,255,255,0.5);
-    }
-    .empty-state svg {
-      width: 32px;
-      height: 32px;
-      margin-bottom: 10px;
-      opacity: 0.3;
-    }
-    .spinner {
-      border: 3px solid #f3f3f3;
-      border-top: 3px solid #000;
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.7);
-      z-index: 2000;
-      align-items: center;
-      justify-content: center;
-    }
-    .modal.active { display: flex; }
-    .modal-content {
-      background: #fff;
-      border-radius: 12px;
-      max-width: 500px;
-      width: 90%;
-      max-height: 80vh;
-      overflow-y: auto;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-    }
-    .modal-header {
-      background: linear-gradient(135deg, #000 0%, #2d2d2d 100%);
-      color: #fff;
-      padding: 20px;
-      border-radius: 12px 12px 0 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-    .modal-header h3 {
-      margin: 0;
-      font-size: 18px;
-    }
-    .close-modal {
-      background: rgba(255,255,255,0.2);
-      border: none;
-      color: #fff;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      cursor: pointer;
-      font-size: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s;
-    }
-    .close-modal:hover {
-      background: rgba(255,255,255,0.3);
-    }
-    .modal-body {
-      padding: 20px;
-    }
-    .exercise-option {
-      background: #f8f8f8;
-      border: 2px solid #e8e8e8;
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 10px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .exercise-option:hover {
-      border-color: #000;
-      background: #fff;
-      transform: translateX(4px);
-    }
-    .exercise-option h4 {
-      font-size: 14px;
-      margin: 0 0 4px 0;
-    }
-    .exercise-option p {
-      font-size: 12px;
-      color: #666;
-      margin: 0;
-    }
-    .form-group {
-      margin-bottom: 15px;
-    }
-    .form-group label {
-      display: block;
-      font-weight: 600;
-      margin-bottom: 6px;
-      font-size: 13px;
-    }
-    .form-group input,
-    .form-group textarea {
-      width: 100%;
-      padding: 10px 12px;
-      border: 2px solid #e0e0e0;
-      border-radius: 6px;
-      font-family: inherit;
-      font-size: 14px;
-      transition: all 0.2s;
-    }
-    .form-group input:focus,
-    .form-group textarea:focus {
-      outline: none;
-      border-color: #000;
-    }
-    .form-group textarea {
-      resize: vertical;
-      min-height: 70px;
-    }
-    .btn-primary {
-      background: #000;
-      color: #fff;
-      border: none;
-      padding: 12px 20px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 14px;
-      width: 100%;
-      transition: all 0.2s;
-    }
-    .btn-primary:hover {
-      background: #2d2d2d;
-    }
-    .btn-primary:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    .btn-back {
-      background: #f5f5f5;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-      margin-bottom: 15px;
-      cursor: pointer;
-      font-size: 13px;
-      transition: all 0.2s;
-    }
-    .btn-back:hover {
-      background: #e8e8e8;
-    }
-    .drag-over {
-      background: rgba(0,0,0,0.02) !important;
-      border: 2px dashed #000 !important;
-    }
-    @media (max-width: 1200px) {
-      .kanban-grid {
-        grid-template-columns: repeat(4, 1fr);
-      }
-    }
-    @media (max-width: 768px) {
-      .kanban-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-      .day-column {
-        min-height: 350px;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="css/student-details.css">
 
   <div class="header">
     <div class="header-content">
@@ -587,6 +102,9 @@
   let selectedDay = null;
   let selectedExercise = null;
   let draggedItem = null;
+  let availableTemplates = [];
+  let currentTemplateId = null;
+  const MAX_TEMPLATES = 10;
 
   DAYS_ORDER.forEach(day => { weekData[day] = []; });
 
@@ -728,91 +246,257 @@
     return DAYS_ORDER[dayIndex];
   }
 
-  function renderKanban() {
-    const grid = document.getElementById('kanbanGrid');
-    const todayDay = getTodayDay();
-    grid.innerHTML = '';
+  let copiedDay = null;
+let copiedExercises = [];
 
-    DAYS_ORDER.forEach(day => {
-      const isToday = day === todayDay;
-      const exercisesCount = weekData[day].length;
+// SUBSTITUIR A FUNÇÃO renderKanban() COMPLETA:
+function renderKanban() {
+  const grid = document.getElementById('kanbanGrid');
+  const todayDay = getTodayDay();
+  grid.innerHTML = '';
 
-      const column = document.createElement('div');
-      column.className = `day-column ${isToday ? 'today' : ''}`;
-      column.dataset.day = day;
+  DAYS_ORDER.forEach(day => {
+    const isToday = day === todayDay;
+    const exercisesCount = weekData[day].length;
+    const hasCopiedData = copiedDay === day;
 
-      column.innerHTML = `
-        <div class="day-header">
-          <div class="day-short">${DAYS_MAP[day].short}</div>
-          <div class="day-name">${DAYS_MAP[day].name}</div>
-          ${isToday ? '<div class="day-indicator"></div>' : ''}
-          <div class="exercise-count">${exercisesCount}</div>
-        </div>
-        <div class="day-body" id="day-${day}" data-day="${day}">
-          ${weekData[day].length === 0 ? `
-            <div class="empty-state">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
-              </svg>
-              <div>Sem treino</div>
-            </div>
-          ` : weekData[day].map((ex, idx) => `
-            <div class="exercise-card" draggable="true" data-day="${day}" data-index="${idx}">
-              <svg class="drag-handle" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="3" y1="12" x2="21" y2="12"></line>
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <line x1="3" y1="18" x2="21" y2="18"></line>
-              </svg>
-              <button class="remove-btn" data-day="${day}" data-index="${idx}">×</button>
-              <div class="exercise-name">${escapeHtml(ex.exerciseName || ex.name || 'Exercício')}</div>
-              <div class="exercise-meta">
-                <span class="meta-badge">${ex.sets || '—'}x</span>
-                <span class="meta-badge">${ex.reps || '—'}</span>
-                ${ex.weight ? `<span class="meta-badge">${escapeHtml(ex.weight)}</span>` : ''}
-              </div>
-              ${ex.notes ? `<div class="exercise-notes">${escapeHtml(ex.notes)}</div>` : ''}
-            </div>
-          `).join('')}
-          <button class="add-btn" data-day="${day}">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
+    const column = document.createElement('div');
+    column.className = `day-column ${isToday ? 'today' : ''}`;
+    column.dataset.day = day;
+
+    column.innerHTML = `
+      <div class="day-header">
+        <div class="day-short">${DAYS_MAP[day].short}</div>
+        <div class="day-name">${DAYS_MAP[day].name}</div>
+        ${isToday ? '<div class="day-indicator"></div>' : ''}
+        <div class="exercise-count">${exercisesCount}</div>
+      </div>
+      
+      <!-- Botões Copiar/Colar -->
+      <div style="padding: 8px 12px; border-bottom: 1px solid ${isToday ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}; display: flex; gap: 6px;">
+        <button 
+          class="copy-day-btn" 
+          data-day="${day}"
+          ${exercisesCount === 0 ? 'disabled' : ''}
+          style="flex: 1; background: ${hasCopiedData ? (isToday ? 'rgba(255,255,255,0.3)' : '#000') : (isToday ? 'rgba(255,255,255,0.15)' : '#f5f5f5')}; color: ${hasCopiedData ? (isToday ? '#fff' : '#fff') : (isToday ? 'rgba(255,255,255,0.8)' : '#666')}; border: 1px solid ${isToday ? 'rgba(255,255,255,0.2)' : '#e0e0e0'}; padding: 6px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: ${exercisesCount === 0 ? 'not-allowed' : 'pointer'}; transition: all 0.2s; opacity: ${exercisesCount === 0 ? '0.4' : '1'}; text-transform: uppercase; letter-spacing: 0.5px;"
+          ${exercisesCount > 0 ? `onmouseover="if(!this.disabled) this.style.background='${isToday ? 'rgba(255,255,255,0.25)' : '#000'}'; if(!this.disabled) this.style.color='#fff';" onmouseout="this.style.background='${hasCopiedData ? (isToday ? 'rgba(255,255,255,0.3)' : '#000') : (isToday ? 'rgba(255,255,255,0.15)' : '#f5f5f5')}'; this.style.color='${hasCopiedData ? '#fff' : (isToday ? 'rgba(255,255,255,0.8)' : '#666')}';"` : ''}>
+          ${hasCopiedData ? '✓ Copiado' : 'Copiar'}
+        </button>
+        <button 
+          class="paste-day-btn" 
+          data-day="${day}"
+          ${!copiedDay || copiedDay === day ? 'disabled' : ''}
+          style="flex: 1; background: ${isToday ? 'rgba(255,255,255,0.15)' : '#f5f5f5'}; color: ${isToday ? 'rgba(255,255,255,0.8)' : '#666'}; border: 1px solid ${isToday ? 'rgba(255,255,255,0.2)' : '#e0e0e0'}; padding: 6px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: ${!copiedDay || copiedDay === day ? 'not-allowed' : 'pointer'}; transition: all 0.2s; opacity: ${!copiedDay || copiedDay === day ? '0.4' : '1'}; text-transform: uppercase; letter-spacing: 0.5px;"
+          ${copiedDay && copiedDay !== day ? `onmouseover="this.style.background='${isToday ? 'rgba(255,255,255,0.25)' : '#22c55e'}'; this.style.color='#fff'; this.style.borderColor='${isToday ? 'rgba(255,255,255,0.3)' : '#22c55e'}';" onmouseout="this.style.background='${isToday ? 'rgba(255,255,255,0.15)' : '#f5f5f5'}'; this.style.color='${isToday ? 'rgba(255,255,255,0.8)' : '#666'}'; this.style.borderColor='${isToday ? 'rgba(255,255,255,0.2)' : '#e0e0e0'}';"` : ''}>
+          Colar
+        </button>
+      </div>
+
+      <div class="day-body" id="day-${day}" data-day="${day}">
+        ${weekData[day].length === 0 ? `
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
             </svg>
-            Adicionar
-          </button>
-        </div>
-      `;
+            <div>Sem treino</div>
+          </div>
+        ` : weekData[day].map((ex, idx) => `
+          <div class="exercise-card" draggable="true" data-day="${day}" data-index="${idx}">
+            <svg class="drag-handle" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+            <button class="remove-btn" data-day="${day}" data-index="${idx}">×</button>
+            <div class="exercise-name">${escapeHtml(ex.exerciseName || ex.name || 'Exercício')}</div>
+            <div class="exercise-meta">
+              <span class="meta-badge">${ex.sets || '—'}x</span>
+              <span class="meta-badge">${ex.reps || '—'}</span>
+              ${ex.weight ? `<span class="meta-badge">${escapeHtml(ex.weight)}</span>` : ''}
+            </div>
+            ${ex.notes ? `<div class="exercise-notes">${escapeHtml(ex.notes)}</div>` : ''}
+          </div>
+        `).join('')}
+        <button class="add-btn" data-day="${day}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Adicionar
+        </button>
+      </div>
+    `;
 
-      grid.appendChild(column);
+    grid.appendChild(column);
 
-      const dayBody = column.querySelector('.day-body');
-      dayBody.addEventListener('dragover', handleDragOver);
-      dayBody.addEventListener('dragleave', handleDragLeave);
-      dayBody.addEventListener('drop', handleDrop);
+    // Event listeners existentes
+    const dayBody = column.querySelector('.day-body');
+    dayBody.addEventListener('dragover', handleDragOver);
+    dayBody.addEventListener('dragleave', handleDragLeave);
+    dayBody.addEventListener('drop', handleDrop);
 
-      column.querySelectorAll('.exercise-card').forEach(card => {
-        card.addEventListener('dragstart', handleDragStart);
-        card.addEventListener('dragend', handleDragEnd);
-      });
-
-      column.querySelectorAll('.remove-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          removeExercise(btn.dataset.day, parseInt(btn.dataset.index));
-        });
-      });
-
-      const addBtn = column.querySelector('.add-btn');
-      if (addBtn) {
-        addBtn.addEventListener('click', () => {
-          openAddExercise(day);
-        });
-      }
+    column.querySelectorAll('.exercise-card').forEach(card => {
+      card.addEventListener('dragstart', handleDragStart);
+      card.addEventListener('dragend', handleDragEnd);
     });
+
+    column.querySelectorAll('.remove-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeExercise(btn.dataset.day, parseInt(btn.dataset.index));
+      });
+    });
+
+    const addBtn = column.querySelector('.add-btn');
+    if (addBtn) {
+      addBtn.addEventListener('click', () => {
+        openAddExercise(day);
+      });
+    }
+
+    // NOVOS EVENT LISTENERS para Copiar/Colar
+    const copyBtn = column.querySelector('.copy-day-btn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        copyDay(day);
+      });
+    }
+
+    const pasteBtn = column.querySelector('.paste-day-btn');
+    if (pasteBtn) {
+      pasteBtn.addEventListener('click', () => {
+        pasteDay(day);
+      });
+    }
+  });
+}
+
+function copyDay(day) {
+  if (!weekData[day] || weekData[day].length === 0) {
+    return;
   }
+  
+  // Criar cópias profundas dos exercícios
+  copiedExercises = weekData[day].map(ex => ({
+    ...ex,
+    id: generateId() // Novo ID para evitar conflitos
+  }));
+  
+  copiedDay = day;
+  
+  console.log(`✓ Copiado ${copiedExercises.length} exercícios de ${DAYS_MAP[day].name}`);
+  
+  // Re-renderizar para mostrar visual feedback
+  renderKanban();
+  
+  // Toast notification simples
+  showToast(`✓ ${DAYS_MAP[day].name} copiado (${copiedExercises.length} exercícios)`);
+}
+
+async function pasteDay(targetDay) {
+  if (!copiedDay || !copiedExercises || copiedExercises.length === 0) {
+    return;
+  }
+  
+  if (copiedDay === targetDay) {
+    return;
+  }
+  
+  // Perguntar se quer substituir ou adicionar
+  const action = weekData[targetDay].length > 0 
+    ? confirm(`${DAYS_MAP[targetDay].name} já tem exercícios.\n\n✓ OK = Adicionar aos existentes\n✗ Cancelar = Não fazer nada\n\nPara substituir completamente, clique em Cancelar e delete os exercícios primeiro.`)
+    : true;
+  
+  if (!action) {
+    return;
+  }
+  
+  // Criar novas cópias com IDs únicos
+  const newExercises = copiedExercises.map(ex => ({
+    ...ex,
+    id: generateId(),
+    createdAt: Date.now()
+  }));
+  
+  // Adicionar aos exercícios existentes
+  weekData[targetDay] = [...weekData[targetDay], ...newExercises];
+  
+  console.log(`✓ Colado ${newExercises.length} exercícios em ${DAYS_MAP[targetDay].name}`);
+  
+  // Salvar no backend
+  await saveWeekData();
+  
+  // Re-renderizar
+  renderKanban();
+  
+  // Toast notification
+  showToast(`✓ ${newExercises.length} exercícios colados em ${DAYS_MAP[targetDay].name}`);
+}
+
+function showToast(message) {
+  // Remover toast anterior se existir
+  const existing = document.getElementById('copy-toast');
+  if (existing) {
+    existing.remove();
+  }
+  
+  const toast = document.createElement('div');
+  toast.id = 'copy-toast';
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: #000;
+    color: #fff;
+    padding: 14px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 10000;
+    animation: slideIn 0.3s ease-out;
+  `;
+  
+  // Adicionar animação
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    @keyframes slideOut {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  document.body.appendChild(toast);
+  
+  // Remover após 3 segundos
+  setTimeout(() => {
+    toast.style.animation = 'slideOut 0.3s ease-in';
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
+  }, 3000);
+}
 
   function handleDragStart(e) {
     draggedItem = {
@@ -974,8 +658,8 @@
   }
 
   function generateId() {
-    return 'id_' + Math.random().toString(36).slice(2, 9);
-  }
+  return 'id_' + Math.random().toString(36).slice(2, 9) + '_' + Date.now();
+}
 
   function escapeHtml(unsafe) {
     if (!unsafe && unsafe !== 0) return '';
@@ -986,6 +670,296 @@
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
   }
+
+  async function loadTemplates() {
+  try {
+    const user = authManager.getCurrentUser();
+    if (!user) return;
+
+    const snapshot = await db.collection('workoutTemplates')
+      .where('personalId', '==', user.uid)
+      .get();
+
+    availableTemplates = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+    console.log(`✓ ${availableTemplates.length} templates carregados`);
+  } catch (error) {
+    console.error('Erro ao carregar templates:', error);
+    availableTemplates = [];
+  }
+}
+
+async function saveAsTemplate() {
+  try {
+    const user = authManager.getCurrentUser();
+    if (!user) return;
+
+    // Verificar se há exercícios na semana
+    let hasExercises = false;
+    DAYS_ORDER.forEach(day => {
+      if (weekData[day] && weekData[day].length > 0) {
+        hasExercises = true;
+      }
+    });
+
+    if (!hasExercises) {
+      alert('⚠️ Adicione exercícios antes de salvar como template');
+      return;
+    }
+
+    // Verificar limite de templates
+    if (availableTemplates.length >= MAX_TEMPLATES) {
+      alert(`⚠️ Você atingiu o limite de ${MAX_TEMPLATES} templates.\n\nExclua um template existente antes de criar um novo.`);
+      return;
+    }
+
+    const name = prompt('Nome do template:', '');
+    if (!name || name.trim() === '') return;
+
+    const description = prompt('Descrição (opcional):', '') || '';
+
+    // Criar cópia profunda dos dados da semana
+    const templateData = {};
+    DAYS_ORDER.forEach(day => {
+      if (weekData[day] && weekData[day].length > 0) {
+        templateData[day] = weekData[day].map(ex => ({
+          exerciseId: ex.exerciseId || null,
+          exerciseName: ex.exerciseName || ex.name || '',
+          videoUrl: ex.videoUrl || '',
+          sets: ex.sets || 0,
+          reps: ex.reps || '',
+          weight: ex.weight || '',
+          notes: ex.notes || ''
+        }));
+      }
+    });
+
+    const templateDoc = {
+      name: name.trim(),
+      description: description.trim(),
+      personalId: user.uid,
+      days: templateData,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    const docRef = await db.collection('workoutTemplates').add(templateDoc);
+    console.log('✓ Template salvo:', docRef.id);
+
+    await loadTemplates();
+    renderTemplateSelector();
+    showToast(`✓ Template "${name}" salvo com sucesso`);
+
+  } catch (error) {
+    console.error('Erro ao salvar template:', error);
+    alert('❌ Erro ao salvar template: ' + error.message);
+  }
+}
+
+async function applyTemplate(templateId) {
+  const template = availableTemplates.find(t => t.id === templateId);
+  if (!template) return;
+
+  // Verificar se há treino atual
+  let hasCurrentWorkout = false;
+  DAYS_ORDER.forEach(day => {
+    if (weekData[day] && weekData[day].length > 0) {
+      hasCurrentWorkout = true;
+    }
+  });
+
+  if (hasCurrentWorkout) {
+    const confirm = window.confirm(
+      `⚠️ ATENÇÃO!\n\nAplicar o template "${template.name}" vai SUBSTITUIR todos os exercícios atuais desta semana.\n\n✓ OK = Substituir tudo\n✗ Cancelar = Manter como está`
+    );
+    if (!confirm) return;
+  }
+
+  // Limpar semana atual
+  DAYS_ORDER.forEach(day => {
+    weekData[day] = [];
+  });
+
+  // Aplicar template com novos IDs
+  if (template.days) {
+    DAYS_ORDER.forEach(day => {
+      if (template.days[day] && template.days[day].length > 0) {
+        weekData[day] = template.days[day].map(ex => ({
+          ...ex,
+          id: generateId(),
+          createdAt: Date.now()
+        }));
+      }
+    });
+  }
+
+  currentTemplateId = templateId;
+  await saveWeekData();
+  renderKanban();
+  renderTemplateSelector();
+  showToast(`✓ Template "${template.name}" aplicado`);
+}
+
+async function deleteTemplate(templateId) {
+  const template = availableTemplates.find(t => t.id === templateId);
+  if (!template) return;
+
+  const confirm = window.confirm(`Excluir template "${template.name}"?\n\nEsta ação não pode ser desfeita.`);
+  if (!confirm) return;
+
+  try {
+    await db.collection('workoutTemplates').doc(templateId).delete();
+    
+    if (currentTemplateId === templateId) {
+      currentTemplateId = null;
+    }
+
+    await loadTemplates();
+    renderTemplateSelector();
+    showToast(`✓ Template "${template.name}" excluído`);
+  } catch (error) {
+    console.error('Erro ao excluir template:', error);
+    alert('❌ Erro ao excluir template: ' + error.message);
+  }
+}
+
+function clearTemplate() {
+  currentTemplateId = null;
+  renderTemplateSelector();
+  showToast('✓ Template desvinculado - treino personalizado');
+}
+
+function renderTemplateSelector() {
+  let selectorHTML = `
+    <div style="background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 style="margin: 0; font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 10px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          Templates de Treino
+          <span style="background: #f0f0f0; color: #666; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">${availableTemplates.length}/${MAX_TEMPLATES}</span>
+        </h3>
+        <button id="saveTemplateBtn" style="background: #000; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#000'">
+          + Salvar Semana como Template
+        </button>
+      </div>
+  `;
+
+  if (currentTemplateId) {
+    const current = availableTemplates.find(t => t.id === currentTemplateId);
+    if (current) {
+      selectorHTML += `
+        <div style="background: linear-gradient(135deg, #f0fff4 0%, #dcfce7 100%); border: 2px solid #86efac; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+          <div style="display: flex; justify-content: space-between; align-items: start;">
+            <div style="flex: 1;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span style="font-size: 12px; font-weight: 700; color: #15803d; text-transform: uppercase; letter-spacing: 0.5px;">Template Ativo</span>
+              </div>
+              <div style="font-size: 16px; font-weight: 600; color: #000; margin-bottom: 4px;">${escapeHtml(current.name)}</div>
+              ${current.description ? `<div style="font-size: 13px; color: #666;">${escapeHtml(current.description)}</div>` : ''}
+            </div>
+            <button onclick="clearTemplate()" style="background: rgba(0,0,0,0.05); border: none; color: #666; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.1)'" onmouseout="this.style.background='rgba(0,0,0,0.05)'">Desvincular</button>
+          </div>
+        </div>
+      `;
+    }
+  } else {
+    selectorHTML += `
+      <div style="background: #f8f8f8; border: 1px dashed #ddd; border-radius: 8px; padding: 12px 15px; margin-bottom: 15px; font-size: 13px; color: #666; font-style: italic;">
+        ℹ️ Nenhum template ativo - treino personalizado para este aluno
+      </div>
+    `;
+  }
+
+  if (availableTemplates.length > 0) {
+    selectorHTML += `
+      <details ${availableTemplates.length <= 3 ? 'open' : ''}>
+        <summary style="cursor: pointer; font-size: 14px; font-weight: 600; padding: 10px; background: #f8f8f8; border-radius: 6px; list-style: none; display: flex; align-items: center; gap: 8px; user-select: none;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='#f8f8f8'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition: transform 0.2s;">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+          Meus Templates (${availableTemplates.length})
+        </summary>
+        <div style="margin-top: 12px; display: grid; gap: 10px;">
+    `;
+
+    availableTemplates.forEach(template => {
+      const isActive = currentTemplateId === template.id;
+      const exerciseCount = Object.values(template.days || {}).reduce((sum, day) => sum + (day?.length || 0), 0);
+
+      selectorHTML += `
+        <div style="background: ${isActive ? '#f0fff4' : '#fff'}; border: 1px solid ${isActive ? '#86efac' : '#e0e0e0'}; border-radius: 8px; padding: 12px; transition: all 0.2s;">
+          <div style="display: flex; justify-content: space-between; align-items: start; gap: 10px;">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px; color: #000;">${escapeHtml(template.name)}</div>
+              ${template.description ? `<div style="font-size: 12px; color: #666; margin-bottom: 6px;">${escapeHtml(template.description)}</div>` : ''}
+              <div style="font-size: 11px; color: #999;">${exerciseCount} exercícios • ${Object.keys(template.days || {}).length} dias</div>
+            </div>
+            <div style="display: flex; gap: 6px; flex-shrink: 0;">
+              ${!isActive ? `
+                <button onclick="applyTemplate('${template.id}')" style="background: #000; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#000'">Aplicar</button>
+              ` : `
+                <span style="background: #22c55e; color: #fff; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 600;">Ativo</span>
+              `}
+              <button onclick="deleteTemplate('${template.id}')" style="background: transparent; border: 1px solid #e0e0e0; color: #cc0000; padding: 6px 10px; border-radius: 4px; font-size: 12px; cursor: pointer;" onmouseover="this.style.background='#fff3f3'; this.style.borderColor='#cc0000'" onmouseout="this.style.background='transparent'; this.style.borderColor='#e0e0e0'">×</button>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    selectorHTML += `
+        </div>
+      </details>
+    `;
+  }
+
+  selectorHTML += `</div>`;
+
+  // Inserir ou atualizar
+  let container = document.getElementById('templateSelector');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'templateSelector';
+    const kanbanContainer = document.querySelector('.page-title');
+    if (kanbanContainer) {
+      kanbanContainer.insertAdjacentElement('afterend', container);
+    }
+  }
+  container.innerHTML = selectorHTML;
+
+  // Event listener para botão salvar
+  const saveBtn = document.getElementById('saveTemplateBtn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', saveAsTemplate);
+  }
+
+  // Animar ícone do details
+  const details = container.querySelector('details');
+  if (details) {
+    const icon = details.querySelector('summary svg');
+    details.addEventListener('toggle', () => {
+      if (icon) {
+        icon.style.transform = details.open ? 'rotate(90deg)' : 'rotate(0deg)';
+      }
+    });
+  }
+}
+
+// Expor funções globalmente
+window.clearTemplate = clearTemplate;
+window.applyTemplate = applyTemplate;
+window.deleteTemplate = deleteTemplate;
 
   loadStudentData();
 

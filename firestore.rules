@@ -35,7 +35,7 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
-    // Coleção de conclusões de treinos - NOVA
+    // Coleção de conclusões de treinos
     match /workoutCompletions/{completionId} {
       // Leitura: apenas o próprio usuário ou personal vinculado
       allow read: if request.auth != null && 
@@ -52,12 +52,30 @@ service cloud.firestore {
                        completionId.matches(request.auth.uid + '_.*');
     }
 
+    // ==========================================
+    // Coleção de templates de treino - NOVA
+    // ==========================================
+    match /workoutTemplates/{templateId} {
+      // Leitura: apenas o próprio personal que criou
+      allow read: if request.auth != null && 
+                     resource.data.personalId == request.auth.uid;
+      
+      // Criar: apenas personal autenticado (deve incluir seu próprio UID)
+      allow create: if request.auth != null && 
+                       request.resource.data.personalId == request.auth.uid;
+      
+      // Atualizar: apenas o próprio personal que criou
+      allow update: if request.auth != null && 
+                       resource.data.personalId == request.auth.uid;
+      
+      // Deletar: apenas o próprio personal que criou
+      allow delete: if request.auth != null && 
+                       resource.data.personalId == request.auth.uid;
+    }
+
     // Negar acesso padrão a outras coleções
     match /{document=**} {
       allow read, write: if false;
     }
   }
 }
-
-// NOTA: Estas regras incluem a nova coleção workoutCompletions
-// para armazenar o progresso de conclusão dos treinos dos alunos
