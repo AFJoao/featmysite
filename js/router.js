@@ -13,6 +13,7 @@ class Router {
       '/personal/exercises': 'pages/personal/exercises.html',
       '/personal/create-workout': 'pages/personal/create-workout.html',
       '/personal/student/:id': 'pages/personal/student-details.html',
+      '/personal/feedbacks': 'pages/personal/feedbacks.html',
       '/student/dashboard': 'pages/student/dashboard.html',
       '/student/view-workout': 'pages/student/view-workout.html'
     };
@@ -22,6 +23,7 @@ class Router {
       '/personal/exercises': 'personal',
       '/personal/create-workout': 'personal',
       '/personal/student/:id': 'personal',
+      '/personal/feedbacks': 'personal',
       '/student/dashboard': 'student',
       '/student/view-workout': 'student'
     };
@@ -258,7 +260,9 @@ class Router {
 
     try {
       console.log('Carregando página:', pagePath);
-      const response = await fetch(pagePath);
+      // Adicionar timestamp para evitar cache
+      const cacheBuster = '?v=' + Date.now();
+      const response = await fetch(pagePath + cacheBuster);
       
       if (!response.ok) {
         throw new Error('Página não encontrada');

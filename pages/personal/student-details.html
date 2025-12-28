@@ -533,7 +533,6 @@ function showToast(message) {
         dragged = JSON.parse(e.dataTransfer.getData('text/plain'));
       } catch (err) { /* ignore */ }
     }
-
     if (!dragged) return;
 
     const targetDay = dayBody.dataset.day;

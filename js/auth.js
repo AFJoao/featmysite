@@ -189,6 +189,7 @@ class AuthManager {
       console.log('Código recebido:', code);
       
       // Garantir autenticação anônima antes de consultar
+
       await this.ensureAnonymousAuth();
       console.log('✓ Autenticação garantida');
       
@@ -541,4 +542,5 @@ if (document.readyState === 'loading') {
 }
 
 // Exportar para uso global
+window.authManager = authManager;
 window.authManager = authManager;

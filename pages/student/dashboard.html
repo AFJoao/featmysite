@@ -33,9 +33,120 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal de Feedback -->
+  <div id="feedbackModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: #ffffff; border-radius: 12px; padding: 30px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <h3 style="font-size: 24px; font-weight: 600; margin: 0; color: #000000;">Enviar Feedback</h3>
+        <button id="closeFeedbackModal" style="background: transparent; border: none; cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <form id="feedbackForm">
+        <input type="hidden" id="feedbackWorkoutId">
+        <input type="hidden" id="feedbackDayOfWeek">
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 14px; font-weight: 600; color: #000000; margin-bottom: 8px;">Nível de Esforço (1-10)</label>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <input type="range" id="effortLevel" min="1" max="10" value="5" style="flex: 1; height: 8px; border-radius: 4px; background: #e5e7eb; outline: none;">
+            <span id="effortLevelValue" style="font-size: 18px; font-weight: 700; color: #000000; min-width: 30px; text-align: center;">5</span>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 14px; font-weight: 600; color: #000000; margin-bottom: 8px;">Sensação Geral</label>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <label style="flex: 1; min-width: 120px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s;" id="sensationLeve">
+              <input type="radio" name="sensation" value="leve" style="display: none;">
+              <span style="font-size: 14px; font-weight: 500; color: #666;">Leve</span>
+            </label>
+            <label style="flex: 1; min-width: 120px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s;" id="sensationIdeal">
+              <input type="radio" name="sensation" value="ideal" checked style="display: none;">
+              <span style="font-size: 14px; font-weight: 500; color: #666;">Ideal</span>
+            </label>
+            <label style="flex: 1; min-width: 120px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s;" id="sensationPesado">
+              <input type="radio" name="sensation" value="pesado" style="display: none;">
+              <span style="font-size: 14px; font-weight: 500; color: #666;">Pesado</span>
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 14px; font-weight: 600; color: #000000; margin-bottom: 8px;">Dor ou Desconforto?</label>
+          <div style="display: flex; gap: 10px;">
+            <label style="flex: 1; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s;" id="hasPainSim">
+              <input type="radio" name="hasPain" value="true" style="display: none;">
+              <span style="font-size: 14px; font-weight: 500; color: #666;">Sim</span>
+            </label>
+            <label style="flex: 1; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s;" id="hasPainNao">
+              <input type="radio" name="hasPain" value="false" checked style="display: none;">
+              <span style="font-size: 14px; font-weight: 500; color: #666;">Não</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="painLocationContainer" style="margin-bottom: 20px; display: none;">
+          <label style="display: block; font-size: 14px; font-weight: 600; color: #000000; margin-bottom: 8px;">Local da Dor</label>
+          <input type="text" id="painLocation" placeholder="Ex: Ombro direito, joelho esquerdo..." style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; outline: none; box-sizing: border-box;">
+        </div>
+
+        <div style="margin-bottom: 25px;">
+          <label style="display: block; font-size: 14px; font-weight: 600; color: #000000; margin-bottom: 8px;">Comentário (opcional)</label>
+          <textarea id="feedbackComment" rows="3" placeholder="Compartilhe como foi o treino..." style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; outline: none; resize: vertical; box-sizing: border-box; font-family: inherit;"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button type="button" id="cancelFeedbackBtn" style="flex: 1; padding: 14px; border: 2px solid #e0e0e0; border-radius: 8px; background: #ffffff; color: #666; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;">Cancelar</button>
+          <button type="submit" style="flex: 1; padding: 14px; border: none; border-radius: 8px; background: #000000; color: #ffffff; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;">Enviar Feedback</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <script>
+// Modelo de Feedback (inline para evitar problemas de carregamento)
+if (typeof window.feedbackModel === 'undefined') {
+  window.feedbackModel = {
+    getCurrentWeekIdentifier: function() {
+      const now = new Date();
+      const startOfYear = new Date(now.getFullYear(), 0, 1);
+      const pastDaysOfYear = (now - startOfYear) / 86400000;
+      const weekNumber = Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
+      return `${now.getFullYear()}-${weekNumber}`;
+    },
+    getFeedbackKey: function(studentId, workoutId, weekIdentifier, dayOfWeek) {
+      return `${studentId}_${workoutId}_${weekIdentifier}_${dayOfWeek}`;
+    },
+    validateFeedbackData: function(data) {
+      const errors = [];
+      if (!data.studentId || typeof data.studentId !== 'string') errors.push('studentId é obrigatório');
+      if (!data.workoutId || typeof data.workoutId !== 'string') errors.push('workoutId é obrigatório');
+      if (!data.weekIdentifier || typeof data.weekIdentifier !== 'string') errors.push('weekIdentifier é obrigatório');
+      if (!data.dayOfWeek || !['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].includes(data.dayOfWeek)) {
+        errors.push('dayOfWeek inválido');
+      }
+      if (typeof data.effortLevel !== 'number' || data.effortLevel < 1 || data.effortLevel > 10) {
+        errors.push('effortLevel deve ser um número entre 1 e 10');
+      }
+      if (!['leve', 'ideal', 'pesado'].includes(data.sensation)) {
+        errors.push('sensation deve ser "leve", "ideal" ou "pesado"');
+      }
+      if (typeof data.hasPain !== 'boolean') errors.push('hasPain deve ser boolean');
+      if (data.hasPain && (!data.painLocation || data.painLocation.trim() === '')) {
+        errors.push('painLocation é obrigatório quando hasPain é true');
+      }
+      return { isValid: errors.length === 0, errors };
+    }
+  };
+}
+
 (async function() {
   const daysMap = {
     monday: { name: 'Segunda', short: 'SEG' },
@@ -221,14 +332,41 @@
             </div>
           `;
         } else {
+          console.log(`Renderizando ${dayWorkouts.length} treino(s) para ${day}`);
           let dayHTML = '';
           for (const w of dayWorkouts) {
             const progress = await calculateWorkoutProgress(w);
             const exerciseCount = (w.days[day] || []).length;
             const isCompleted = progress.percentage === 100;
             
+            // Verificar se já existe feedback para este dia
+            let weekIdentifier = '';
+            let hasFeedback = false;
+            
+            try {
+              if (window.feedbackModel && typeof window.feedbackModel.getCurrentWeekIdentifier === 'function') {
+                weekIdentifier = window.feedbackModel.getCurrentWeekIdentifier();
+              } else {
+                // Fallback: calcular semana manualmente
+                const now = new Date();
+                const startOfYear = new Date(now.getFullYear(), 0, 1);
+                const pastDaysOfYear = (now - startOfYear) / 86400000;
+                const weekNumber = Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
+                weekIdentifier = `${now.getFullYear()}-${weekNumber}`;
+              }
+              
+              if (dbManager && typeof dbManager.hasFeedbackForDay === 'function') {
+                hasFeedback = await dbManager.hasFeedbackForDay(w.id, day, weekIdentifier);
+              }
+            } catch (error) {
+              console.error('Erro ao verificar feedback:', error);
+              hasFeedback = false;
+            }
+            
+            console.log(`Feedback check - Workout: ${w.id}, Day: ${day}, Week: ${weekIdentifier}, HasFeedback: ${hasFeedback}`);
+            
             dayHTML += `
-              <div onclick="viewWorkoutFunc('${w.id}')" style="background: ${isToday ? 'rgba(255,255,255,0.1)' : (isCompleted ? 'linear-gradient(135deg, #f0fff4 0%, #dcfce7 100%)' : '#f8f8f8')}; border: 1px solid ${isToday ? 'rgba(255,255,255,0.2)' : (isCompleted ? '#86efac' : '#e8e8e8')}; border-radius: 8px; padding: 12px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;">
+              <div style="background: ${isToday ? 'rgba(255,255,255,0.1)' : (isCompleted ? 'linear-gradient(135deg, #f0fff4 0%, #dcfce7 100%)' : '#f8f8f8')}; border: 1px solid ${isToday ? 'rgba(255,255,255,0.2)' : (isCompleted ? '#86efac' : '#e8e8e8')}; border-radius: 8px; padding: 12px; transition: all 0.2s; position: relative; overflow: hidden;">
                 ${isCompleted ? `
                   <div style="position: absolute; top: 8px; right: 8px;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3">
@@ -236,25 +374,46 @@
                     </svg>
                   </div>
                 ` : ''}
-                <div style="font-weight: 600; font-size: 13px; color: ${isToday ? '#ffffff' : '#000000'}; margin-bottom: 6px; line-height: 1.3; padding-right: ${isCompleted ? '25px' : '0'};">${w.name}</div>
-                <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: ${isToday ? 'rgba(255,255,255,0.7)' : '#666'}; margin-bottom: 8px;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polyline points="12 6 12 12 16 14"></polyline>
-                  </svg>
-                  ${exerciseCount} exercício${exerciseCount !== 1 ? 's' : ''}
-                </div>
-                ${progress.total > 0 ? `
-                  <div style="margin-top: 8px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                      <span style="font-size: 10px; color: ${isToday ? 'rgba(255,255,255,0.7)' : '#666'}; font-weight: 600;">PROGRESSO</span>
-                      <span style="font-size: 10px; color: ${isToday ? 'rgba(255,255,255,0.9)' : '#000000'}; font-weight: 700;">${progress.percentage}%</span>
+                <div onclick="viewWorkoutFunc('${w.id}')" style="cursor: pointer;">
+                  <div style="font-weight: 600; font-size: 13px; color: ${isToday ? '#ffffff' : '#000000'}; margin-bottom: 6px; line-height: 1.3; padding-right: ${isCompleted ? '25px' : '0'};">${w.name}</div>
+                  <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: ${isToday ? 'rgba(255,255,255,0.7)' : '#666'}; margin-bottom: 8px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    ${exerciseCount} exercício${exerciseCount !== 1 ? 's' : ''}
+                  </div>
+                  ${progress.total > 0 ? `
+                    <div style="margin-top: 8px;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <span style="font-size: 10px; color: ${isToday ? 'rgba(255,255,255,0.7)' : '#666'}; font-weight: 600;">PROGRESSO</span>
+                        <span style="font-size: 10px; color: ${isToday ? 'rgba(255,255,255,0.9)' : '#000000'}; font-weight: 700;">${progress.percentage}%</span>
+                      </div>
+                      <div style="width: 100%; height: 6px; background: ${isToday ? 'rgba(255,255,255,0.2)' : '#e5e7eb'}; border-radius: 3px; overflow: hidden;">
+                        <div style="width: ${progress.percentage}%; height: 100%; background: ${isCompleted ? '#22c55e' : (isToday ? '#ffffff' : '#000000')}; transition: width 0.3s; border-radius: 3px;"></div>
+                      </div>
                     </div>
-                    <div style="width: 100%; height: 6px; background: ${isToday ? 'rgba(255,255,255,0.2)' : '#e5e7eb'}; border-radius: 3px; overflow: hidden;">
-                      <div style="width: ${progress.percentage}%; height: 100%; background: ${isCompleted ? '#22c55e' : (isToday ? '#ffffff' : '#000000')}; transition: width 0.3s; border-radius: 3px;"></div>
+                  ` : ''}
+                </div>
+                ${hasFeedback ? `
+                  <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid ${isToday ? 'rgba(255,255,255,0.2)' : '#e0e0e0'};">
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: ${isToday ? 'rgba(255,255,255,0.8)' : '#22c55e'}; font-weight: 600;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      Feedback enviado
                     </div>
                   </div>
-                ` : ''}
+                ` : `
+                  <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid ${isToday ? 'rgba(255,255,255,0.2)' : '#e0e0e0'};">
+                    <button onclick="event.stopPropagation(); openFeedbackModal('${w.id}', '${day}')" style="width: 100%; padding: 8px; background: ${isToday ? 'rgba(255,255,255,0.2)' : '#000000'}; color: ${isToday ? '#ffffff' : '#ffffff'}; border: none; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                      </svg>
+                      Enviar feedback
+                    </button>
+                  </div>
+                `}
               </div>
             `;
           }
@@ -277,8 +436,182 @@
     }
   }
 
+  // Função para abrir modal de feedback
+  window.openFeedbackModal = function(workoutId, dayOfWeek) {
+    console.log('Abrindo modal de feedback:', workoutId, dayOfWeek);
+    const modal = document.getElementById('feedbackModal');
+    const workoutIdInput = document.getElementById('feedbackWorkoutId');
+    const dayInput = document.getElementById('feedbackDayOfWeek');
+    
+    if (!modal) {
+      console.error('Modal não encontrado!');
+      alert('Erro: Modal de feedback não encontrado. Recarregue a página.');
+      return;
+    }
+    
+    if (!workoutIdInput || !dayInput) {
+      console.error('Inputs do modal não encontrados!');
+      return;
+    }
+    
+    workoutIdInput.value = workoutId;
+    dayInput.value = dayOfWeek;
+    
+    modal.style.display = 'flex';
+    console.log('Modal aberto com sucesso');
+  };
+
+  // Fechar modal
+  const closeFeedbackModal = document.getElementById('closeFeedbackModal');
+  const cancelFeedbackBtn = document.getElementById('cancelFeedbackBtn');
+  const feedbackModal = document.getElementById('feedbackModal');
+
+  if (closeFeedbackModal) {
+    closeFeedbackModal.addEventListener('click', () => {
+      feedbackModal.style.display = 'none';
+    });
+  }
+
+  if (cancelFeedbackBtn) {
+    cancelFeedbackBtn.addEventListener('click', () => {
+      feedbackModal.style.display = 'none';
+    });
+  }
+
+  // Fechar ao clicar fora
+  if (feedbackModal) {
+    feedbackModal.addEventListener('click', (e) => {
+      if (e.target === feedbackModal) {
+        feedbackModal.style.display = 'none';
+      }
+    });
+  }
+
+  // Atualizar valor do esforço
+  const effortLevel = document.getElementById('effortLevel');
+  const effortLevelValue = document.getElementById('effortLevelValue');
+  if (effortLevel && effortLevelValue) {
+    effortLevel.addEventListener('input', (e) => {
+      effortLevelValue.textContent = e.target.value;
+    });
+  }
+
+  // Mostrar/ocultar campo de local da dor
+  const hasPainInputs = document.querySelectorAll('input[name="hasPain"]');
+  const painLocationContainer = document.getElementById('painLocationContainer');
+  const painLocationInput = document.getElementById('painLocation');
+
+  hasPainInputs.forEach(input => {
+    input.addEventListener('change', (e) => {
+      if (painLocationContainer) {
+        painLocationContainer.style.display = e.target.value === 'true' ? 'block' : 'none';
+        if (e.target.value === 'false' && painLocationInput) {
+          painLocationInput.value = '';
+        }
+      }
+    });
+  });
+
+  // Estilizar seleção de sensação
+  const sensationLabels = ['sensationLeve', 'sensationIdeal', 'sensationPesado'];
+  sensationLabels.forEach(labelId => {
+    const label = document.getElementById(labelId);
+    if (label) {
+      const radio = label.querySelector('input[type="radio"]');
+      if (radio) {
+        radio.addEventListener('change', () => {
+          sensationLabels.forEach(id => {
+            const lbl = document.getElementById(id);
+            if (lbl) {
+              lbl.style.borderColor = '#e0e0e0';
+              lbl.style.background = '#ffffff';
+            }
+          });
+          label.style.borderColor = '#000000';
+          label.style.background = '#f8f8f8';
+        });
+        if (radio.checked) {
+          label.style.borderColor = '#000000';
+          label.style.background = '#f8f8f8';
+        }
+      }
+    }
+  });
+
+  // Estilizar seleção de dor
+  const painLabels = ['hasPainSim', 'hasPainNao'];
+  painLabels.forEach(labelId => {
+    const label = document.getElementById(labelId);
+    if (label) {
+      const radio = label.querySelector('input[type="radio"]');
+      if (radio) {
+        radio.addEventListener('change', () => {
+          painLabels.forEach(id => {
+            const lbl = document.getElementById(id);
+            if (lbl) {
+              lbl.style.borderColor = '#e0e0e0';
+              lbl.style.background = '#ffffff';
+            }
+          });
+          label.style.borderColor = '#000000';
+          label.style.background = '#f8f8f8';
+        });
+        if (radio.checked) {
+          label.style.borderColor = '#000000';
+          label.style.background = '#f8f8f8';
+        }
+      }
+    }
+  });
+
+  // Enviar feedback
+  const feedbackForm = document.getElementById('feedbackForm');
+  if (feedbackForm) {
+    feedbackForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const workoutId = document.getElementById('feedbackWorkoutId').value;
+      const dayOfWeek = document.getElementById('feedbackDayOfWeek').value;
+      const effortLevel = parseInt(document.getElementById('effortLevel').value);
+      const sensation = document.querySelector('input[name="sensation"]:checked')?.value;
+      const hasPain = document.querySelector('input[name="hasPain"]:checked')?.value === 'true';
+      const painLocation = document.getElementById('painLocation').value;
+      const comment = document.getElementById('feedbackComment').value;
+
+      const weekIdentifier = window.feedbackModel?.getCurrentWeekIdentifier();
+
+      const result = await dbManager.createFeedback({
+        workoutId,
+        dayOfWeek,
+        effortLevel,
+        sensation,
+        hasPain,
+        painLocation: hasPain ? painLocation : '',
+        comment: comment || '',
+        weekIdentifier
+      });
+
+      if (result.success) {
+        alert('Feedback enviado com sucesso!');
+        feedbackModal.style.display = 'none';
+        feedbackForm.reset();
+        document.getElementById('effortLevelValue').textContent = '5';
+        document.getElementById('effortLevel').value = '5';
+        painLocationContainer.style.display = 'none';
+        await loadWorkouts();
+      } else {
+        alert('Erro ao enviar feedback: ' + result.error);
+      }
+    });
+  }
+
+  console.log('✓ Dashboard Aluno carregado - feedbackModel disponível:', typeof window.feedbackModel !== 'undefined');
+  console.log('✓ Modal de feedback presente:', document.getElementById('feedbackModal') !== null);
+
   await loadStudentData();
   await loadWorkouts();
+  
+  console.log('✓ Treinos carregados - verifique os cards para ver o botão "Enviar feedback"');
 })();
 </script>
 

@@ -408,6 +408,172 @@ class DatabaseManager {
       return null;
     }
   }
+
+  /**
+   * Criar feedback de treino
+   */
+  async createFeedback(feedbackData) {
+    try {
+      const user = authManager.getCurrentUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      // Adicionar studentId aos dados (não vem do formulário)
+      const feedbackDataWithStudent = {
+        ...feedbackData,
+        studentId: user.uid
+      };
+
+      // Validar dados (agora com studentId)
+      if (typeof window.feedbackModel !== 'undefined') {
+        const validation = window.feedbackModel.validateFeedbackData(feedbackDataWithStudent);
+        if (!validation.isValid) {
+          return {
+            success: false,
+            error: validation.errors.join(', ')
+          };
+        }
+      }
+
+      // Verificar se já existe feedback para este dia/semana
+      const weekIdentifier = feedbackData.weekIdentifier || window.feedbackModel?.getCurrentWeekIdentifier();
+      const feedbackKey = window.feedbackModel?.getFeedbackKey(
+        user.uid,
+        feedbackData.workoutId,
+        weekIdentifier,
+        feedbackData.dayOfWeek
+      );
+
+      // Verificar se já existe
+      const existingDoc = await db.collection('feedbacks').doc(feedbackKey).get();
+      if (existingDoc.exists) {
+        return {
+          success: false,
+          error: 'Você já enviou feedback para este dia nesta semana'
+        };
+      }
+
+      // Criar feedback
+      await db.collection('feedbacks').doc(feedbackKey).set({
+        id: feedbackKey,
+        studentId: user.uid,
+        workoutId: feedbackData.workoutId,
+        weekIdentifier: weekIdentifier,
+        dayOfWeek: feedbackData.dayOfWeek,
+        effortLevel: feedbackData.effortLevel,
+        sensation: feedbackData.sensation,
+        hasPain: feedbackData.hasPain,
+        painLocation: feedbackData.hasPain ? (feedbackData.painLocation || '') : '',
+        comment: feedbackData.comment || '',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      return {
+        success: true,
+        id: feedbackKey
+      };
+    } catch (error) {
+      console.error('Erro ao criar feedback:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Verificar se já existe feedback para um dia/semana específico
+   */
+  async hasFeedbackForDay(workoutId, dayOfWeek, weekIdentifier = null) {
+    try {
+      const user = authManager.getCurrentUser();
+      if (!user) return false;
+
+      const weekId = weekIdentifier || window.feedbackModel?.getCurrentWeekIdentifier();
+      const feedbackKey = window.feedbackModel?.getFeedbackKey(
+        user.uid,
+        workoutId,
+        weekId,
+        dayOfWeek
+      );
+
+      const doc = await db.collection('feedbacks').doc(feedbackKey).get();
+      return doc.exists;
+    } catch (error) {
+      console.error('Erro ao verificar feedback:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Obter feedbacks de um aluno específico
+   */
+  async getStudentFeedbacks(studentId = null) {
+    try {
+      const user = authManager.getCurrentUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      const targetStudentId = studentId || user.uid;
+
+      const snapshot = await db.collection('feedbacks')
+        .where('studentId', '==', targetStudentId)
+        .get();
+
+      return snapshot.docs.map(doc => doc.data()).sort((a, b) => {
+        if (!a.createdAt) return 1;
+        if (!b.createdAt) return -1;
+        return b.createdAt.seconds - a.createdAt.seconds;
+      });
+    } catch (error) {
+      console.error('Erro ao obter feedbacks:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Obter feedbacks de todos os alunos do personal
+   */
+  async getPersonalFeedbacks() {
+    try {
+      const user = authManager.getCurrentUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      // Obter todos os alunos do personal
+      const students = await this.getMyStudents();
+      if (students.length === 0) return [];
+
+      const studentIds = students.map(s => s.uid);
+
+      // Buscar feedbacks de todos os alunos
+      const allFeedbacks = [];
+      for (const studentId of studentIds) {
+        const feedbacks = await this.getStudentFeedbacks(studentId);
+        allFeedbacks.push(...feedbacks);
+      }
+
+      // Ordenar por data (mais recentes primeiro)
+      return allFeedbacks.sort((a, b) => {
+        if (!a.createdAt) return 1;
+        if (!b.createdAt) return -1;
+        return b.createdAt.seconds - a.createdAt.seconds;
+      });
+    } catch (error) {
+      console.error('Erro ao obter feedbacks do personal:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Obter feedback específico
+   */
+  async getFeedback(feedbackId) {
+    try {
+      const doc = await db.collection('feedbacks').doc(feedbackId).get();
+      return doc.exists ? doc.data() : null;
+    } catch (error) {
+      console.error('Erro ao obter feedback:', error);
+      return null;
+    }
+  }
 }
 
 // Instância global do DatabaseManager
