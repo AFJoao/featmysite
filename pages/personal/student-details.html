@@ -177,6 +177,8 @@
 
   async function loadStudentData() {
     studentId = window.routeParams?.id || window.routeParams?.studentId || null;
+    await loadTemplates();
+    renderTemplateSelector();
 
     if (!studentId) {
       const urlParams = new URLSearchParams(window.location.search);
