@@ -508,59 +508,98 @@ class DatabaseManager {
    * Obter feedbacks de um aluno específico
    */
   async getStudentFeedbacks(studentId = null) {
-    try {
-      const user = authManager.getCurrentUser();
-      if (!user) throw new Error('Usuário não autenticado');
+  try {
+    const user = authManager.getCurrentUser();
+    if (!user) throw new Error('Usuário não autenticado');
 
-      const targetStudentId = studentId || user.uid;
+    const targetStudentId = studentId || user.uid;
 
+    console.log('=== GET STUDENT FEEDBACKS ===');
+    console.log('Current user:', user.uid);
+    console.log('Target student:', targetStudentId);
+
+    // ✅ Se está buscando seus próprios feedbacks (aluno)
+    if (targetStudentId === user.uid) {
+      console.log('→ Buscando feedbacks próprios');
       const snapshot = await db.collection('feedbacks')
         .where('studentId', '==', targetStudentId)
         .get();
 
-      return snapshot.docs.map(doc => doc.data()).sort((a, b) => {
+      const feedbacks = snapshot.docs.map(doc => doc.data());
+      console.log('✓ Feedbacks encontrados:', feedbacks.length);
+      
+      return feedbacks.sort((a, b) => {
         if (!a.createdAt) return 1;
         if (!b.createdAt) return -1;
         return b.createdAt.seconds - a.createdAt.seconds;
       });
-    } catch (error) {
-      console.error('Erro ao obter feedbacks:', error);
-      return [];
     }
+
+    // Se é personal tentando buscar, não usar esta função
+    console.warn('⚠️ Personal deve usar getPersonalFeedbacks()');
+    return [];
+
+  } catch (error) {
+    console.error('Erro ao obter feedbacks:', error);
+    throw error;
   }
+}
 
   /**
    * Obter feedbacks de todos os alunos do personal
    */
   async getPersonalFeedbacks() {
-    try {
-      const user = authManager.getCurrentUser();
-      if (!user) throw new Error('Usuário não autenticado');
+  try {
+    const user = authManager.getCurrentUser();
+    if (!user) throw new Error('Usuário não autenticado');
 
-      // Obter todos os alunos do personal
-      const students = await this.getMyStudents();
-      if (students.length === 0) return [];
+    console.log('=== GET PERSONAL FEEDBACKS ===');
+    console.log('Personal UID:', user.uid);
 
-      const studentIds = students.map(s => s.uid);
+    // 1️⃣ Buscar workouts do personal
+    const workoutsSnapshot = await db.collection('workouts')
+      .where('personalId', '==', user.uid)
+      .get();
 
-      // Buscar feedbacks de todos os alunos
-      const allFeedbacks = [];
-      for (const studentId of studentIds) {
-        const feedbacks = await this.getStudentFeedbacks(studentId);
-        allFeedbacks.push(...feedbacks);
-      }
+    const workoutIds = workoutsSnapshot.docs.map(doc => doc.id);
+    console.log('→ Workouts encontrados:', workoutIds.length);
 
-      // Ordenar por data (mais recentes primeiro)
-      return allFeedbacks.sort((a, b) => {
-        if (!a.createdAt) return 1;
-        if (!b.createdAt) return -1;
-        return b.createdAt.seconds - a.createdAt.seconds;
-      });
-    } catch (error) {
-      console.error('Erro ao obter feedbacks do personal:', error);
+    if (workoutIds.length === 0) {
       return [];
     }
+
+    // 2️⃣ Buscar feedbacks por workoutId
+    const allFeedbacks = [];
+    
+    for (const workoutId of workoutIds) {
+      try {
+        const feedbackSnapshot = await db.collection('feedbacks')
+          .where('workoutId', '==', workoutId)
+          .get();
+
+        const feedbacks = feedbackSnapshot.docs.map(doc => doc.data());
+        console.log(`  Workout ${workoutId}: ${feedbacks.length} feedbacks`);
+        
+        allFeedbacks.push(...feedbacks);
+      } catch (err) {
+        console.error(`Erro no workout ${workoutId}:`, err);
+      }
+    }
+
+    console.log('✓ Total de feedbacks:', allFeedbacks.length);
+
+    // 3️⃣ Ordenar
+    return allFeedbacks.sort((a, b) => {
+      if (!a.createdAt) return 1;
+      if (!b.createdAt) return -1;
+      return b.createdAt.seconds - a.createdAt.seconds;
+    });
+
+  } catch (error) {
+    console.error('Erro ao obter feedbacks do personal:', error);
+    throw error;
   }
+}
 
   /**
    * Obter feedback específico

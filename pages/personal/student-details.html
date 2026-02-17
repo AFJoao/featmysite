@@ -211,22 +211,37 @@
       }
 
       if (window.dbManager && typeof dbManager.getPersonalWorkouts === 'function') {
-        const workouts = await dbManager.getPersonalWorkouts();
-        const studentWorkouts = workouts.filter(w => w.studentId === studentId);
-        studentWorkouts.forEach(workout => {
-          if (workout.days) {
-            Object.keys(workout.days).forEach(day => {
-              if (workout.days[day] && workout.days[day].length > 0) {
-                weekData[day] = [...weekData[day], ...workout.days[day].map(ex => ({
-                  ...ex,
-                  workoutId: workout.id,
-                  workoutName: workout.name
-                }))];
-              }
-            });
-          }
-        });
-      } else {
+  const workouts = await dbManager.getPersonalWorkouts();
+  const studentWorkouts = workouts.filter(w => w.studentId === studentId);
+  
+  console.log(`✓ ${studentWorkouts.length} treinos encontrados`);
+  
+  // LIMPAR DADOS ANTIGOS
+  DAYS_ORDER.forEach(day => { weekData[day] = []; });
+  
+  if (studentWorkouts.length > 0) {
+    // PEGAR APENAS O MAIS RECENTE
+    const latestWorkout = studentWorkouts.sort((a, b) => {
+      return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+    })[0];
+    
+    console.log('📋 Carregando treino:', latestWorkout.name);
+    
+    // CARREGAR APENAS 1 TREINO
+    if (latestWorkout.days) {
+      Object.keys(latestWorkout.days).forEach(day => {
+        if (latestWorkout.days[day] && latestWorkout.days[day].length > 0) {
+          weekData[day] = latestWorkout.days[day].map(ex => ({
+            ...ex,
+            id: ex.id || generateId(),
+            workoutId: latestWorkout.id,
+            workoutName: latestWorkout.name
+          }));
+        }
+      });
+    }
+  }
+} else {
         console.warn('Nenhum método conhecido para carregar treinos do aluno encontrado no dbManager');
       }
 
@@ -638,25 +653,56 @@ function showToast(message) {
   }
 
   async function saveWeekData() {
-    try {
-      if (!studentId) {
-        console.warn('studentId não definido — salvando apenas localmente');
-        return;
-      }
-      if (window.dbManager && typeof dbManager.saveStudentWeek === 'function') {
-        await dbManager.saveStudentWeek(studentId, weekData);
-        return;
-      }
-      if (window.dbManager && typeof dbManager.updateStudentWeek === 'function') {
-        await dbManager.updateStudentWeek(studentId, weekData);
-        return;
-      }
-      console.warn('Nenhum método conhecido de salvamento encontrado em dbManager — salvamento local apenas.');
-    } catch (err) {
-      console.error('Erro ao salvar semana:', err);
-      alert('Erro ao salvar alterações. Verifique a conexão.');
+  try {
+    if (!studentId) {
+      console.warn('studentId não definido');
+      return;
     }
+
+    const user = authManager.getCurrentUser();
+    if (!user) {
+      console.error('Usuário não autenticado');
+      return;
+    }
+
+    console.log('💾 Salvando treino...');
+
+    // BUSCAR TREINO EXISTENTE
+    const allWorkouts = await dbManager.getPersonalWorkouts();
+    const studentWorkouts = allWorkouts.filter(w => w.studentId === studentId);
+
+    if (studentWorkouts.length > 0) {
+      // ATUALIZAR O MAIS RECENTE
+      const latestWorkout = studentWorkouts.sort((a, b) => {
+        return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+      })[0];
+
+      console.log('✏️ Atualizando treino existente:', latestWorkout.id);
+
+      await dbManager.updateWorkout(latestWorkout.id, {
+        days: weekData,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      console.log('✅ Treino atualizado!');
+    } else {
+      // CRIAR NOVO
+      console.log('➕ Criando novo treino');
+
+      await dbManager.createWorkout(
+        `Treino Semanal - ${new Date().toLocaleDateString('pt-BR')}`,
+        'Treino personalizado',
+        weekData,
+        studentId
+      );
+
+      console.log('✅ Treino criado!');
+    }
+  } catch (err) {
+    console.error('❌ Erro ao salvar:', err);
+    alert('Erro ao salvar alterações');
   }
+}
 
   function generateId() {
   return 'id_' + Math.random().toString(36).slice(2, 9) + '_' + Date.now();
@@ -763,44 +809,45 @@ async function applyTemplate(templateId) {
   const template = availableTemplates.find(t => t.id === templateId);
   if (!template) return;
 
-  // Verificar se há treino atual
-  let hasCurrentWorkout = false;
-  DAYS_ORDER.forEach(day => {
-    if (weekData[day] && weekData[day].length > 0) {
-      hasCurrentWorkout = true;
-    }
-  });
+  // AVISAR O USUÁRIO
+  const hasCurrentWorkout = DAYS_ORDER.some(day => weekData[day].length > 0);
 
   if (hasCurrentWorkout) {
     const confirm = window.confirm(
-      `⚠️ ATENÇÃO!\n\nAplicar o template "${template.name}" vai SUBSTITUIR todos os exercícios atuais desta semana.\n\n✓ OK = Substituir tudo\n✗ Cancelar = Manter como está`
+      `⚠️ ATENÇÃO!\n\nAplicar o template "${template.name}" vai SUBSTITUIR todos os exercícios atuais.\n\n✓ OK = Substituir\n✗ Cancelar = Manter como está`
     );
     if (!confirm) return;
   }
 
-  // Limpar semana atual
-  DAYS_ORDER.forEach(day => {
-    weekData[day] = [];
-  });
+  console.log('🎨 Aplicando template:', template.name);
 
-  // Aplicar template com novos IDs
+  // ✅ LIMPAR TUDO
+  DAYS_ORDER.forEach(day => { weekData[day] = []; });
+
+  // ✅ APLICAR TEMPLATE COM IDS ÚNICOS
   if (template.days) {
     DAYS_ORDER.forEach(day => {
       if (template.days[day] && template.days[day].length > 0) {
         weekData[day] = template.days[day].map(ex => ({
           ...ex,
-          id: generateId(),
+          id: generateId(), // ID ÚNICO
           createdAt: Date.now()
         }));
       }
     });
   }
 
+  // ✅ SALVAR APENAS UMA VEZ
   currentTemplateId = templateId;
   await saveWeekData();
+  
+  // ✅ RECARREGAR TELA
   renderKanban();
   renderTemplateSelector();
-  showToast(`✓ Template "${template.name}" aplicado`);
+  
+  showToast(`✅ Template "${template.name}" aplicado`);
+  
+  console.log('✅ Template aplicado com sucesso!');
 }
 
 async function deleteTemplate(templateId) {

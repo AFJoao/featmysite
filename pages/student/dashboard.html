@@ -311,7 +311,7 @@ if (typeof window.feedbackModel === 'undefined') {
 
       weeklyContainer.innerHTML = weeklyHTML;
 
-      // Carregar progresso de cada treino
+      // ✅ CORREÇÃO: Carregar exercícios individuais
       for (const day of daysOrder) {
         const dayWorkouts = weeklyWorkouts[day];
         const dayContainer = document.getElementById(`day-${day}-workouts`);
@@ -332,14 +332,14 @@ if (typeof window.feedbackModel === 'undefined') {
             </div>
           `;
         } else {
-          console.log(`Renderizando ${dayWorkouts.length} treino(s) para ${day}`);
+          console.log(`✅ Renderizando ${dayWorkouts.length} treino(s) para ${day}`);
           let dayHTML = '';
+          
+          // ✅ CORREÇÃO: Iterar por EXERCÍCIOS individuais
           for (const w of dayWorkouts) {
-            const progress = await calculateWorkoutProgress(w);
-            const exerciseCount = (w.days[day] || []).length;
-            const isCompleted = progress.percentage === 100;
+            const exercises = w.days[day] || []; // Pegar exercícios do dia específico
             
-            // Verificar se já existe feedback para este dia
+            // Verificar feedback uma vez por treino/dia
             let weekIdentifier = '';
             let hasFeedback = false;
             
@@ -347,7 +347,6 @@ if (typeof window.feedbackModel === 'undefined') {
               if (window.feedbackModel && typeof window.feedbackModel.getCurrentWeekIdentifier === 'function') {
                 weekIdentifier = window.feedbackModel.getCurrentWeekIdentifier();
               } else {
-                // Fallback: calcular semana manualmente
                 const now = new Date();
                 const startOfYear = new Date(now.getFullYear(), 0, 1);
                 const pastDaysOfYear = (now - startOfYear) / 86400000;
@@ -363,60 +362,52 @@ if (typeof window.feedbackModel === 'undefined') {
               hasFeedback = false;
             }
             
-            console.log(`Feedback check - Workout: ${w.id}, Day: ${day}, Week: ${weekIdentifier}, HasFeedback: ${hasFeedback}`);
+            console.log(`📊 Treino: ${w.id}, Dia: ${day}, Exercícios: ${exercises.length}, Feedback: ${hasFeedback}`);
             
-            dayHTML += `
-              <div style="background: ${isToday ? 'rgba(255,255,255,0.1)' : (isCompleted ? 'linear-gradient(135deg, #f0fff4 0%, #dcfce7 100%)' : '#f8f8f8')}; border: 1px solid ${isToday ? 'rgba(255,255,255,0.2)' : (isCompleted ? '#86efac' : '#e8e8e8')}; border-radius: 8px; padding: 12px; transition: all 0.2s; position: relative; overflow: hidden;">
-                ${isCompleted ? `
-                  <div style="position: absolute; top: 8px; right: 8px;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3">
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                  </div>
-                ` : ''}
-                <div onclick="viewWorkoutFunc('${w.id}')" style="cursor: pointer;">
-                  <div style="font-weight: 600; font-size: 13px; color: ${isToday ? '#ffffff' : '#000000'}; margin-bottom: 6px; line-height: 1.3; padding-right: ${isCompleted ? '25px' : '0'};">${w.name}</div>
-                  <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: ${isToday ? 'rgba(255,255,255,0.7)' : '#666'}; margin-bottom: 8px;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <polyline points="12 6 12 12 16 14"></polyline>
-                    </svg>
-                    ${exerciseCount} exercício${exerciseCount !== 1 ? 's' : ''}
-                  </div>
-                  ${progress.total > 0 ? `
-                    <div style="margin-top: 8px;">
-                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <span style="font-size: 10px; color: ${isToday ? 'rgba(255,255,255,0.7)' : '#666'}; font-weight: 600;">PROGRESSO</span>
-                        <span style="font-size: 10px; color: ${isToday ? 'rgba(255,255,255,0.9)' : '#000000'}; font-weight: 700;">${progress.percentage}%</span>
-                      </div>
-                      <div style="width: 100%; height: 6px; background: ${isToday ? 'rgba(255,255,255,0.2)' : '#e5e7eb'}; border-radius: 3px; overflow: hidden;">
-                        <div style="width: ${progress.percentage}%; height: 100%; background: ${isCompleted ? '#22c55e' : (isToday ? '#ffffff' : '#000000')}; transition: width 0.3s; border-radius: 3px;"></div>
-                      </div>
+            // ✅ Iterar por cada exercício individual
+            for (const exercise of exercises) {
+              const exerciseName = exercise.exerciseName || exercise.name || 'Exercício';
+              const sets = exercise.sets || '-';
+              const reps = exercise.reps || '-';
+              const weight = exercise.weight || '';
+              
+              dayHTML += `
+                <div style="background: ${isToday ? 'rgba(255,255,255,0.1)' : '#f8f8f8'}; border: 1px solid ${isToday ? 'rgba(255,255,255,0.2)' : '#e8e8e8'}; border-radius: 8px; padding: 12px; transition: all 0.2s; position: relative; overflow: hidden;">
+                  <div onclick="viewWorkoutFunc('${w.id}')" style="cursor: pointer;">
+                    <div style="font-weight: 600; font-size: 13px; color: ${isToday ? '#ffffff' : '#000000'}; margin-bottom: 6px; line-height: 1.3;">${exerciseName}</div>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;">
+                      <span style="background: ${isToday ? 'rgba(255,255,255,0.2)' : '#000'}; color: ${isToday ? '#fff' : '#fff'}; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">${sets}x${reps}</span>
+                      ${weight ? `<span style="background: ${isToday ? 'rgba(255,255,255,0.2)' : '#000'}; color: ${isToday ? '#fff' : '#fff'}; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">${weight}</span>` : ''}
                     </div>
-                  ` : ''}
+                  </div>
                 </div>
-                ${hasFeedback ? `
-                  <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid ${isToday ? 'rgba(255,255,255,0.2)' : '#e0e0e0'};">
-                    <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: ${isToday ? 'rgba(255,255,255,0.8)' : '#22c55e'}; font-weight: 600;">
+              `;
+            }
+            
+            // ✅ Botão de feedback (um por treino/dia, não por exercício)
+            if (exercises.length > 0) {
+              dayHTML += `
+                <div style="background: ${isToday ? 'rgba(255,255,255,0.05)' : '#fff'}; border: 1px solid ${isToday ? 'rgba(255,255,255,0.15)' : '#e8e8e8'}; border-radius: 8px; padding: 10px; margin-top: 8px;">
+                  ${hasFeedback ? `
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: ${isToday ? 'rgba(255,255,255,0.8)' : '#22c55e'}; font-weight: 600; justify-content: center;">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="20 6 9 17 4 12"></polyline>
                       </svg>
                       Feedback enviado
                     </div>
-                  </div>
-                ` : `
-                  <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid ${isToday ? 'rgba(255,255,255,0.2)' : '#e0e0e0'};">
-                    <button onclick="event.stopPropagation(); openFeedbackModal('${w.id}', '${day}')" style="width: 100%; padding: 8px; background: ${isToday ? 'rgba(255,255,255,0.2)' : '#000000'}; color: ${isToday ? '#ffffff' : '#ffffff'}; border: none; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                  ` : `
+                    <button onclick="event.stopPropagation(); openFeedbackModal('${w.id}', '${day}')" style="width: 100%; padding: 8px; background: ${isToday ? 'rgba(255,255,255,0.2)' : '#000000'}; color: #ffffff; border: none; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                       </svg>
-                      Enviar feedback
+                      Enviar feedback do treino
                     </button>
-                  </div>
-                `}
-              </div>
-            `;
+                  `}
+                </div>
+              `;
+            }
           }
+          
           dayContainer.innerHTML = dayHTML;
         }
       }
@@ -605,13 +596,12 @@ if (typeof window.feedbackModel === 'undefined') {
     });
   }
 
-  console.log('✓ Dashboard Aluno carregado - feedbackModel disponível:', typeof window.feedbackModel !== 'undefined');
-  console.log('✓ Modal de feedback presente:', document.getElementById('feedbackModal') !== null);
+  console.log('✓ Dashboard Aluno carregado - VERSÃO CORRIGIDA com exercícios individuais');
 
   await loadStudentData();
   await loadWorkouts();
   
-  console.log('✓ Treinos carregados - verifique os cards para ver o botão "Enviar feedback"');
+  console.log('✓ Treinos carregados - cada exercício aparece como um card separado');
 })();
 </script>
 

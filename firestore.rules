@@ -1,89 +1,22 @@
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    
-    // Coleção de usuários - PERMISSIVO
-    match /users/{userId} {
-      // Qualquer um pode ler (necessário para código de referência)
-      allow read: if true;
-      
-      // Criar: qualquer usuário autenticado
-      allow create: if request.auth != null;
-      
-      // Atualizar: próprio usuário OU qualquer personal (para lista de alunos)
-      allow update: if request.auth != null;
-      
-      // Deletar: apenas próprio usuário
-      allow delete: if request.auth != null && request.auth.uid == userId;
-    }
+match /feedbacks/{feedbackId} {
 
-    // Coleção de exercícios - PERMISSIVO
-    match /exercises/{exerciseId} {
-      // Qualquer um autenticado pode ler
-      allow read: if request.auth != null;
-      
-      // Qualquer um autenticado pode criar
-      allow create: if request.auth != null;
-      
-      // Qualquer um autenticado pode atualizar/deletar
-      allow update, delete: if request.auth != null;
-    }
+  // LEITURA:
+  // - aluno pode ler seus próprios feedbacks
+  // - personal pode ler feedback se for o personal do treino
+  allow read: if request.auth != null &&
+    (
+      resource.data.studentId == request.auth.uid ||
+      (
+        resource.data.workoutId != null &&
+        exists(/databases/$(database)/documents/workouts/$(resource.data.workoutId)) &&
+        get(/databases/$(database)/documents/workouts/$(resource.data.workoutId)).data.personalId == request.auth.uid
+      )
+    );
 
-    // Coleção de treinos - TOTALMENTE PERMISSIVO
-    match /workouts/{workoutId} {
-      // Qualquer um autenticado pode fazer tudo
-      allow read, write: if request.auth != null;
-    }
+  // CRIAR: apenas o próprio aluno
+  allow create: if request.auth != null &&
+                   request.resource.data.studentId == request.auth.uid;
 
-    // Coleção de conclusões de treinos - NOVA
-    match /workoutCompletions/{completionId} {
-      // Leitura: apenas o próprio usuário ou personal vinculado
-      allow read: if request.auth != null && 
-                     (completionId.matches(request.auth.uid + '_.*') || 
-                      get(/databases/$(database)/documents/workouts/$(completionId.split('_')[1])).data.personalId == request.auth.uid);
-      
-      // Escrita: apenas o próprio usuário (aluno marcando exercícios)
-      allow create, update: if request.auth != null && 
-                               completionId.matches(request.auth.uid + '_.*') &&
-                               request.resource.data.userId == request.auth.uid;
-      
-      // Deletar: apenas o próprio usuário
-      allow delete: if request.auth != null && 
-                       completionId.matches(request.auth.uid + '_.*');
-    }
-
-    // Coleção de feedbacks - NOVA
-    match /feedbacks/{feedbackId} {
-      // Leitura: 
-      // - Aluno pode ler seus próprios feedbacks (feedbackId começa com seu UID)
-      // - Personal pode ler feedbacks de seus alunos (verificando workoutId)
-      allow read: if request.auth != null && (
-        // Aluno pode ler se o feedbackId começa com seu UID
-        feedbackId.matches(request.auth.uid + '_.*') ||
-        // OU se o documento existe e é do aluno OU do personal do treino
-        (resource != null && (
-          resource.data.studentId == request.auth.uid ||
-          (resource.data.workoutId != null && 
-           exists(/databases/$(database)/documents/workouts/$(resource.data.workoutId)) &&
-           get(/databases/$(database)/documents/workouts/$(resource.data.workoutId)).data.personalId == request.auth.uid)
-        ))
-      );
-      
-      // Criar: apenas o próprio aluno (feedbackId deve começar com UID do aluno)
-      allow create: if request.auth != null && 
-                       feedbackId.matches(request.auth.uid + '_.*') &&
-                       request.resource.data.studentId == request.auth.uid;
-      
-      // Atualizar/deletar: não permitido (feedbacks são imutáveis após criação)
-      allow update, delete: if false;
-    }
-
-    // Negar acesso padrão a outras coleções
-    match /{document=**} {
-      allow read, write: if false;
-    }
-  }
+  // Feedback é imutável
+  allow update, delete: if false;
 }
-
-// NOTA: Estas regras incluem a nova coleção workoutCompletions
-// para armazenar o progresso de conclusão dos treinos dos alunos
